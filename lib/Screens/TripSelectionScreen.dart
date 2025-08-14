@@ -1,0 +1,338 @@
+import 'dart:convert';
+
+import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
+import 'package:http/http.dart' as http;
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:swift_ride/Screens/DirectionsMapScreen.dart';
+
+import 'package:timezone/timezone.dart' as tz;
+import 'package:timezone/data/latest_all.dart' as tzdata;
+
+class TripSelectionScreen extends StatefulWidget {
+  final String from;
+  final String to;
+
+  const TripSelectionScreen({super.key, required this.from, required this.to});
+
+  @override
+  State<TripSelectionScreen> createState() => _TripSelectionScreenState();
+}
+
+class _TripSelectionScreenState extends State<TripSelectionScreen>
+    with SingleTickerProviderStateMixin {
+  late TabController _tabController;
+  late List<String> weekDays;
+  Map<String, List<Map<String, dynamic>>> tripData = {};
+  bool isLoading = true;
+
+  final supabase = Supabase.instance.client;
+
+  // Put your Google Maps API key here
+  final String googleMapsApiKey = 'AIzaSyCMH5gotuF6vrX4z8Ak4JFfDhpyvL43g50';
+
+  @override
+  void initState() {
+    super.initState();
+
+    // Initialize timezone database
+    tzdata.initializeTimeZones();
+
+    final today = tz.TZDateTime.now(tz.getLocation('Asia/Karachi'));
+
+    weekDays = List.generate(
+      7,
+      (index) => DateFormat('EEE').format(today.add(Duration(days: index))),
+    );
+
+    _tabController = TabController(length: weekDays.length, vsync: this);
+
+    fetchTrips();
+  }
+
+  Future<Map<String, dynamic>?> fetchDistanceDuration(
+      String origin, String destination) async {
+    try {
+      final url = Uri.parse(
+          'https://maps.googleapis.com/maps/api/distancematrix/json?units=metric&origins=$origin&destinations=$destination&key=$googleMapsApiKey');
+
+      final response = await http.get(url);
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+
+        if (data['rows'] != null &&
+            data['rows'].isNotEmpty &&
+            data['rows'][0]['elements'] != null &&
+            data['rows'][0]['elements'].isNotEmpty) {
+          final element = data['rows'][0]['elements'][0];
+          if (element['status'] == 'OK') {
+            return {
+              'distance': element['distance']['text'],
+              'duration': element['duration']['text'],
+            };
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint('Distance Matrix API error: $e');
+    }
+    return null;
+  }
+
+  Future<void> fetchTrips() async {
+    try {
+      setState(() {
+        isLoading = true;
+      });
+
+      final today = tz.TZDateTime.now(tz.getLocation('Asia/Karachi'));
+
+      final fromCity = widget.from.trim();
+      final toCity = widget.to.trim();
+
+      debugPrint('Fetching trips from: $fromCity to: $toCity and reverse');
+
+      final tripsFromTo = await supabase
+          .from('trips')
+          .select()
+          .eq('from_city', fromCity)
+          .eq('to_city', toCity)
+          .order('depart_time', ascending: true);
+
+      final tripsToFrom = await supabase
+          .from('trips')
+          .select()
+          .eq('from_city', toCity)
+          .eq('to_city', fromCity)
+          .order('depart_time', ascending: true);
+
+      final response = [...tripsFromTo, ...tripsToFrom];
+
+      debugPrint('Total trips fetched: ${response.length}');
+
+      if (response.isNotEmpty) {
+        Map<String, List<Map<String, dynamic>>> loadedTrips = {};
+
+        for (var i = 0; i < 7; i++) {
+          final date = today.add(Duration(days: i));
+          final dayName = i == 0 ? "Today" : DateFormat('EEE').format(date);
+
+          final tripsForDay = response.where((trip) {
+            DateTime departUtc = DateTime.parse(trip['depart_time']).toUtc();
+            final departDatePKT =
+                tz.TZDateTime.from(departUtc, tz.getLocation('Asia/Karachi'));
+            return departDatePKT.day == date.day &&
+                departDatePKT.month == date.month &&
+                departDatePKT.year == date.year;
+          }).toList();
+
+          // For each trip, fetch distance & duration from Google Maps API
+          final futures = tripsForDay.map((trip) async {
+  final origin = trip['from_city'];
+  final destination = trip['to_city'];
+
+  final distDur = await fetchDistanceDuration(origin, destination);
+  if (distDur != null) {
+    trip['distance_text'] = distDur['distance'];
+    trip['duration_text'] = distDur['duration'];
+  } else {
+    trip['distance_text'] = 'N/A';
+    trip['duration_text'] = 'N/A';
+  }
+});
+
+await Future.wait(futures);
+
+
+          loadedTrips[dayName] = tripsForDay;
+        }
+
+        setState(() {
+          tripData = loadedTrips;
+          isLoading = false;
+        });
+      } else {
+        debugPrint('No trips found for given cities.');
+        setState(() {
+          tripData = {};
+          isLoading = false;
+        });
+      }
+    } catch (e) {
+      debugPrint("Error fetching trips: $e");
+      setState(() => isLoading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final nowPKT = tz.TZDateTime.now(tz.getLocation('Asia/Karachi'));
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text("Choose Your Trip"),
+        bottom: TabBar(
+          controller: _tabController,
+          isScrollable: true,
+          tabs: weekDays.map((day) => Tab(text: day)).toList(),
+        ),
+      ),
+      body: isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : TabBarView(
+              controller: _tabController,
+              children: weekDays.map((day) {
+                String key = day == weekDays[0] ? "Today" : day;
+                final trips = tripData[key] ?? [];
+
+                final filteredTrips = key == "Today"
+                    ? trips.where((trip) {
+                        DateTime departUtc = DateTime.parse(trip['depart_time']).toUtc();
+                        final departTimePKT = tz.TZDateTime.from(
+                            departUtc, tz.getLocation('Asia/Karachi'));
+                        return departTimePKT.isAfter(nowPKT);
+                      }).toList()
+                    : trips;
+
+                if (filteredTrips.isEmpty) {
+                  return const Center(child: Text("No trips available"));
+                }
+
+                return RefreshIndicator(
+                  onRefresh: fetchTrips,
+                  child: ListView.builder(
+                    itemCount: filteredTrips.length,
+                    itemBuilder: (context, index) {
+                      final trip = filteredTrips[index];
+
+                      DateTime departUtc =
+                          DateTime.parse(trip["depart_time"]).toUtc();
+                      DateTime arriveUtc =
+                          DateTime.parse(trip["arrive_time"]).toUtc();
+
+                      final departTimePKT = tz.TZDateTime.from(
+                          departUtc, tz.getLocation('Asia/Karachi'));
+                      final arriveTimePKT = tz.TZDateTime.from(
+                          arriveUtc, tz.getLocation('Asia/Karachi'));
+
+                
+                     
+
+                      final totalSeats = trip['total_seats'] ?? 12;
+
+                     return InkWell(
+  onTap: () {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => DirectionsMapScreen(
+          fromAddress: trip['from_city'], // or trip["from"]
+          toAddress: trip['to_city'],     // or trip["to"]
+        ),
+      ),
+    );
+  },
+  child: Card(
+    margin: const EdgeInsets.all(10),
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(12),
+    ),
+    elevation: 3,
+    child: Padding(
+      padding: const EdgeInsets.all(12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Text(
+                DateFormat('hh:mm a').format(departTimePKT),
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const Text("  →  "),
+              Text(
+                DateFormat('hh:mm a').format(arriveTimePKT),
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.grey,
+                ),
+              ),
+              const SizedBox(width: 70),
+            ],
+          ),
+          const SizedBox(height: 5),
+          Text("${trip["from"]} → ${trip["to"]}"),
+          const SizedBox(height: 5),
+          Row(
+            children: [
+              const Icon(Icons.directions_bus, size: 18),
+              const SizedBox(width: 4),
+              Text(trip["type"] ?? ""),
+              if (trip["ac"] == true) ...[
+                const SizedBox(width: 8),
+                const Icon(Icons.ac_unit, size: 18),
+              ],
+            ],
+          ),
+          const Divider(),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Total Seats: $totalSeats',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                  color: Colors.grey[700],
+                ),
+              ),
+              Text(
+                "${trip["price"]} PKR",
+                style: const TextStyle(
+                  color: Colors.green,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Distance: ${trip['distance_text'] ?? 'N/A'}',
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  color: Colors.black87,
+                ),
+              ),
+              Text(
+                'Duration: ${trip['duration_text'] ?? 'N/A'}',
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  color: Colors.black87,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    ),
+  ),
+);
+
+                    },
+                  ),
+                );
+              }).toList(),
+            ),
+    );
+  }
+}
