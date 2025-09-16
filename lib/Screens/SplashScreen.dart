@@ -1,5 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:swift_ride/Screens/EnableLocationScreen.dart';
 import 'package:swift_ride/Screens/OnBoardingScreen.dart';
 
 import 'package:animated_text_kit/animated_text_kit.dart';
@@ -23,36 +25,11 @@ class _SplashScreenState extends State<SplashScreen>
   bool _showSlideText = false;
   bool _showWavyText = false;
   bool _showLoader = false;
-  bool _showSplashContent = false;
+  bool _showSplashContent = true;
 
   @override
   void initState() {
     super.initState();
-
-    Timer(const Duration(seconds: 2), () {
-      setState(() {
-        _showSplashContent = true;
-      });
-
-      _vanController.forward().whenComplete(() {
-        setState(() {
-          _showSlideText = true;
-        });
-        _textSlideController.forward().whenComplete(() {
-          setState(() {
-            _showWavyText = true;
-            _showSlideText = false;
-          });
-        });
-      });
-    });
-
-    Timer(const Duration(seconds: 13), () {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => OnBoardingScreen()),
-      );
-    });
 
     _vanController = AnimationController(
       duration: const Duration(seconds: 2),
@@ -73,6 +50,40 @@ class _SplashScreenState extends State<SplashScreen>
     ).animate(
       CurvedAnimation(parent: _textSlideController, curve: Curves.easeOut),
     );
+
+    _vanController.forward().whenComplete(() {
+      setState(() {
+        _showSlideText = true;
+      });
+      _textSlideController.forward().whenComplete(() {
+        setState(() {
+          _showWavyText = true;
+          _showSlideText = false;
+        });
+      });
+    });
+
+    _navigateNext();
+  }
+
+  Future<void> _navigateNext() async {
+    Timer(const Duration(seconds: 11), () async {
+      final prefs = await SharedPreferences.getInstance();
+      final isFirstTime = prefs.getBool('isFirstTime') ?? true;
+
+      if (isFirstTime) {
+        await prefs.setBool('isFirstTime', false);
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const OnBoardingScreen()),
+        );
+      } else {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const EnableLocationScreen()),
+        );
+      }
+    });
   }
 
   @override
@@ -96,7 +107,7 @@ class _SplashScreenState extends State<SplashScreen>
                 _showSplashContent
                     ? Stack(
                       children: [
-                        // Blobs
+                        // Background blobs
                         Positioned(
                           top: -screenHeight * 0.33,
                           left: -screenWidth * 0.73,
@@ -162,7 +173,7 @@ class _SplashScreenState extends State<SplashScreen>
                           ),
                         ),
 
-                        // Centered animated content
+                        // Center animations
                         Center(
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
