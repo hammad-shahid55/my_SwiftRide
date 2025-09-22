@@ -3,7 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:swift_ride/Widgets/CustomBackButton.dart';
 import 'package:swift_ride/Widgets/CustomTextField.dart';
 import 'package:swift_ride/Widgets/CustomTextWidget.dart';
-import 'package:swift_ride/Widgets/Homeindicator.dart';
+
 import 'package:swift_ride/Widgets/MainButton.dart';
 import 'package:swift_ride/Widgets/LoadingDialog.dart';
 
@@ -103,7 +103,6 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                   onPressed: sendPasswordReset,
                 ),
                 SizedBox(height: screenHeight * 0.05),
-                HomeIndicator(),
               ],
             ),
           ],

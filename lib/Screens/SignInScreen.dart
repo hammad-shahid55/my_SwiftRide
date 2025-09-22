@@ -11,12 +11,11 @@ import 'package:swift_ride/Widgets/CustomCheckbox.dart';
 import 'package:swift_ride/Widgets/CustomTextField.dart';
 import 'package:swift_ride/Widgets/CustomTextWidget.dart';
 import 'package:swift_ride/Widgets/GoogleButton.dart';
-import 'package:swift_ride/Widgets/Homeindicator.dart';
+
 import 'package:swift_ride/Widgets/LoadingDialog.dart';
 import 'package:swift_ride/Widgets/MainButton.dart';
 import 'package:swift_ride/Widgets/OrDivider.dart';
 import 'package:swift_ride/Widgets/PrivacyTermsText.dart';
-
 
 class SignInScreen extends StatefulWidget {
   const SignInScreen({super.key});
@@ -281,7 +280,6 @@ class _SignInScreenState extends State<SignInScreen> {
                         text: 'Sign In',
                         backgroundColor: const Color.fromRGBO(123, 61, 244, 1),
                         onPressed: signInUser,
-                        
                       ),
                       SizedBox(height: screenHeight * 0.03),
                       const Center(child: PrivacyTermsText()),
@@ -290,7 +288,6 @@ class _SignInScreenState extends State<SignInScreen> {
                 ),
               ),
             ),
-            const HomeIndicator(),
           ],
         ),
       ),

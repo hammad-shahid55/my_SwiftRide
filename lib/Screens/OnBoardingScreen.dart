@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:swift_ride/Screens/EnableLocationScreen.dart';
-import 'package:swift_ride/Widgets/Homeindicator.dart';
 
 class OnBoardingScreen extends StatefulWidget {
   const OnBoardingScreen({super.key});
@@ -167,7 +166,6 @@ class _OnBoardingScreenState extends State<OnBoardingScreen> {
                 ],
               ),
             ),
-            HomeIndicator(),
           ],
         ),
       ),

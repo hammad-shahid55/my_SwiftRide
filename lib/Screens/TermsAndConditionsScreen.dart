@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:swift_ride/Widgets/CustomAppBar.dart';
 
-import 'package:swift_ride/Widgets/Homeindicator.dart';
-
 class TermsAndConditionsScreen extends StatelessWidget {
   const TermsAndConditionsScreen({super.key});
 
@@ -86,7 +84,6 @@ class TermsAndConditionsScreen extends StatelessWidget {
               ),
             ),
           ),
-          const HomeIndicator(),
         ],
       ),
     );

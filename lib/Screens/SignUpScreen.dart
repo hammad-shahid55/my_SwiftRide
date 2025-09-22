@@ -11,7 +11,7 @@ import 'package:swift_ride/Widgets/CustomCheckbox.dart';
 import 'package:swift_ride/Widgets/CustomTextField.dart';
 import 'package:swift_ride/Widgets/CustomTextWidget.dart';
 import 'package:swift_ride/Widgets/GoogleButton.dart';
-import 'package:swift_ride/Widgets/Homeindicator.dart';
+
 import 'package:swift_ride/Widgets/LoadingDialog.dart';
 import 'package:swift_ride/Widgets/MainButton.dart';
 import 'package:swift_ride/Widgets/OrDivider.dart';
@@ -387,7 +387,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
                 ),
               ),
             ),
-            const HomeIndicator(),
           ],
         ),
       ),
