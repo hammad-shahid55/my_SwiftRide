@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:swift_ride/Screens/WelcomeScreen.dart';
+import 'package:swift_ride/Screens/HomeScreen.dart';
 import 'package:swift_ride/Widgets/custom_button.dart';
 
 class EnableLocationScreen extends StatefulWidget {
@@ -14,11 +16,11 @@ class EnableLocationScreen extends StatefulWidget {
 class _EnableLocationScreenState extends State<EnableLocationScreen> {
   GoogleMapController? _mapController;
   LatLng _mapCenter = const LatLng(37.4219999, -122.0840575);
-  bool _showBox = true; // 👈 flag to show/hide the box
+  bool _showBox = true;
 
   Future<void> _enableLocation() async {
     setState(() {
-      _showBox = false; // hide the box immediately
+      _showBox = false;
     });
 
     while (true) {
@@ -26,19 +28,19 @@ class _EnableLocationScreenState extends State<EnableLocationScreen> {
       if (!serviceEnabled) {
         await Geolocator.openLocationSettings();
         await Future.delayed(const Duration(seconds: 2));
-        continue; // try again
+        continue;
       }
 
       LocationPermission permission = await Geolocator.checkPermission();
       if (permission == LocationPermission.denied) {
         permission = await Geolocator.requestPermission();
         if (permission == LocationPermission.denied) {
-          continue; // try again
+          continue;
         }
       }
 
       if (permission == LocationPermission.deniedForever) {
-        return; // cannot proceed
+        return;
       }
 
       Position position = await Geolocator.getCurrentPosition();
@@ -57,14 +59,23 @@ class _EnableLocationScreenState extends State<EnableLocationScreen> {
       }
 
       await Future.delayed(const Duration(seconds: 2));
+
+      // 🔹 Check Supabase auth session
+      final session = Supabase.instance.client.auth.currentSession;
+      final user = session?.user;
+
       if (mounted) {
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (_) => const WelcomeScreen()),
+          MaterialPageRoute(
+            builder:
+                (_) =>
+                    user != null ? const HomeScreen() : const WelcomeScreen(),
+          ),
         );
       }
 
-      break; // done
+      break;
     }
   }
 
@@ -74,10 +85,7 @@ class _EnableLocationScreenState extends State<EnableLocationScreen> {
       body: Stack(
         children: [
           GoogleMap(
-            initialCameraPosition: CameraPosition(
-              target: _mapCenter,
-              zoom: 14,
-            ),
+            initialCameraPosition: CameraPosition(target: _mapCenter, zoom: 14),
             myLocationEnabled: true,
             myLocationButtonEnabled: false,
             zoomGesturesEnabled: true,
@@ -97,7 +105,12 @@ class _EnableLocationScreenState extends State<EnableLocationScreen> {
               child: Container(
                 padding: const EdgeInsets.all(24),
                 decoration: BoxDecoration(
-                  color: const Color.fromRGBO(255, 255, 255, 1).withOpacity(0.9),
+                  color: const Color.fromRGBO(
+                    255,
+                    255,
+                    255,
+                    1,
+                  ).withOpacity(0.9),
                   borderRadius: BorderRadius.circular(16),
                 ),
                 child: Column(
@@ -118,7 +131,10 @@ class _EnableLocationScreenState extends State<EnableLocationScreen> {
                     const SizedBox(height: 16),
                     const Text(
                       'Enable Your Location',
-                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                     const SizedBox(height: 8),
                     const Text(
@@ -130,8 +146,8 @@ class _EnableLocationScreenState extends State<EnableLocationScreen> {
                     CustomButton(
                       text: 'Enable Location',
                       onPressed: _enableLocation,
-                      isSecondary: false, 
-                      textColor: Colors.white, 
+                      isSecondary: false,
+                      textColor: Colors.white,
                     ),
                   ],
                 ),
