@@ -2,16 +2,18 @@ import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
 import 'package:swift_ride/Screens/ForgotPasswordScreen.dart';
 import 'package:swift_ride/Screens/SignUpScreen.dart';
 import 'package:swift_ride/Screens/PhoneNumberSignUpScreen.dart';
 import 'package:swift_ride/Screens/UserProfileScreen.dart';
+
 import 'package:swift_ride/Widgets/BuildButton.dart';
 import 'package:swift_ride/Widgets/CustomCheckbox.dart';
 import 'package:swift_ride/Widgets/CustomTextField.dart';
 import 'package:swift_ride/Widgets/CustomTextWidget.dart';
 import 'package:swift_ride/Widgets/GoogleButton.dart';
-
 import 'package:swift_ride/Widgets/LoadingDialog.dart';
 import 'package:swift_ride/Widgets/MainButton.dart';
 import 'package:swift_ride/Widgets/OrDivider.dart';
@@ -27,18 +29,59 @@ class SignInScreen extends StatefulWidget {
 class _SignInScreenState extends State<SignInScreen> {
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
+
+  final GlobalKey<CustomTextFieldState> emailFieldKey = GlobalKey();
+  final GlobalKey<CustomTextFieldState> passwordFieldKey = GlobalKey();
+
   bool isChecked = false;
 
+  @override
+  void initState() {
+    super.initState();
+    _loadSavedEmail();
+  }
+
+  @override
+  void dispose() {
+    emailController.dispose();
+    passwordController.dispose();
+    super.dispose();
+  }
+
+  /// ✅ Save email if "Remember me" is checked
+  Future<void> _saveEmail(String email) async {
+    final prefs = await SharedPreferences.getInstance();
+    if (isChecked) {
+      await prefs.setString('email', email);
+      await prefs.setBool('remember_me', true);
+    } else {
+      await prefs.remove('email');
+      await prefs.setBool('remember_me', false);
+    }
+  }
+
+  /// ✅ Load saved email when screen opens
+  Future<void> _loadSavedEmail() async {
+    final prefs = await SharedPreferences.getInstance();
+    final savedEmail = prefs.getString('email');
+    final savedRemember = prefs.getBool('remember_me') ?? false;
+
+    if (savedRemember && savedEmail != null) {
+      setState(() {
+        emailController.text = savedEmail;
+        isChecked = true;
+      });
+    }
+  }
+
+  /// ✅ Sign in with email & password
   void signInUser() async {
+    final emailValid = emailFieldKey.currentState?.validateNow() ?? false;
+    final passwordValid = passwordFieldKey.currentState?.validateNow() ?? false;
+    if (!emailValid || !passwordValid) return;
+
     final email = emailController.text.trim();
     final password = passwordController.text.trim();
-
-    if (email.isEmpty || password.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter email and password')),
-      );
-      return;
-    }
 
     // ✅ Check network before sign in
     final connectivityResult = await Connectivity().checkConnectivity();
@@ -79,7 +122,9 @@ class _SignInScreenState extends State<SignInScreen> {
       );
 
       if (response.user != null) {
+        await _saveEmail(email); // ✅ Save email if remember me checked
         LoadingDialog.dismiss(context);
+
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (context) => UserProfileScreen()),
@@ -88,15 +133,21 @@ class _SignInScreenState extends State<SignInScreen> {
         LoadingDialog.dismiss(context);
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Login failed. Please check credentials.'),
+            content: Text('Login failed. Please check your credentials.'),
           ),
         );
       }
     } on AuthException catch (error) {
       LoadingDialog.dismiss(context);
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(error.message)));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            error.message.isNotEmpty
+                ? error.message
+                : 'Invalid login credentials',
+          ),
+        ),
+      );
     } catch (e) {
       LoadingDialog.dismiss(context);
       ScaffoldMessenger.of(context).showSnackBar(
@@ -105,6 +156,7 @@ class _SignInScreenState extends State<SignInScreen> {
     }
   }
 
+  /// ✅ Sign in with Google
   void signInWithGoogle() async {
     try {
       LoadingDialog.show(context, message: 'Signing in with Google...');
@@ -162,14 +214,16 @@ class _SignInScreenState extends State<SignInScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      SizedBox(height: screenHeight * 0.03),
                       CustomTextWidget(
                         title: "👋 Welcome Back!",
                         spacing: 8,
                         subtitle: "Let’s dive into your account",
                       ),
                       SizedBox(height: screenHeight * 0.03),
+
+                      // ✅ Email field
                       CustomTextField(
+                        key: emailFieldKey,
                         label: 'Email',
                         hintText: '',
                         isEmail: true,
@@ -177,13 +231,18 @@ class _SignInScreenState extends State<SignInScreen> {
                         controller: emailController,
                       ),
                       SizedBox(height: screenHeight * 0.015),
+
+                      // ✅ Password field
                       CustomTextField(
+                        key: passwordFieldKey,
                         label: 'Password',
                         hintText: 'Password',
                         isPassword: true,
                         controller: passwordController,
                       ),
                       SizedBox(height: screenHeight * 0.02),
+
+                      // ✅ Remember me + Forgot password
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
@@ -214,7 +273,8 @@ class _SignInScreenState extends State<SignInScreen> {
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
-                                  builder: (context) => ForgotPasswordScreen(),
+                                  builder:
+                                      (context) => const ForgotPasswordScreen(),
                                 ),
                               );
                             },
@@ -231,13 +291,15 @@ class _SignInScreenState extends State<SignInScreen> {
                         ],
                       ),
                       SizedBox(height: screenHeight * 0.025),
+
+                      // ✅ Sign up link
                       Center(
                         child: GestureDetector(
                           onTap: () {
                             Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (context) => SignUpScreen(),
+                                builder: (context) => const SignUpScreen(),
                               ),
                             );
                           },
@@ -266,22 +328,27 @@ class _SignInScreenState extends State<SignInScreen> {
                         ),
                       ),
                       SizedBox(height: screenHeight * 0.04),
+
                       OrDivider(),
                       SizedBox(height: screenHeight * 0.04),
+
                       GoogleButton(onPressed: signInWithGoogle),
                       SizedBox(height: screenHeight * 0.02),
+
                       BuildButton(
                         icon: Icons.phone,
                         text: "Continue with Phone",
                         onPressed: continueWithPhone,
                       ),
                       SizedBox(height: screenHeight * 0.06),
+
                       MainButton(
                         text: 'Sign In',
                         backgroundColor: const Color.fromRGBO(123, 61, 244, 1),
                         onPressed: signInUser,
                       ),
                       SizedBox(height: screenHeight * 0.03),
+
                       const Center(child: PrivacyTermsText()),
                     ],
                   ),

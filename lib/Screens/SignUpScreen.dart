@@ -220,7 +220,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      SizedBox(height: screenHeight * 0.03),
                       CustomTextWidget(
                         title: "Let's Get Started!",
                         spacing: 8,
