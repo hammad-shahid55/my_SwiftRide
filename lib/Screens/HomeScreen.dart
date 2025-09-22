@@ -1,11 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:swift_ride/Screens/BecomeDriverScreen.dart';
-import 'package:swift_ride/Screens/ContactUsScreen.dart';
-import 'package:swift_ride/Screens/HistoryScreen.dart';
+
 import 'package:swift_ride/Screens/LocationSelectionScreen.dart';
-import 'package:swift_ride/Screens/SettingsScreen.dart';
-import 'package:swift_ride/Screens/WalletScreen.dart';
+
 import 'package:swift_ride/Screens/WelcomeScreen.dart';
 import 'package:swift_ride/Widgets/app_drawer.dart';
 
