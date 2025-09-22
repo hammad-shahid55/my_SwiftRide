@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:swift_ride/Screens/BecomeDriverScreen.dart';
+import 'package:swift_ride/Screens/ContactUsScreen.dart';
+import 'package:swift_ride/Screens/HistoryScreen.dart';
 import 'package:swift_ride/Screens/LocationSelectionScreen.dart';
 import 'package:swift_ride/Screens/SettingsScreen.dart';
 import 'package:swift_ride/Screens/WalletScreen.dart';
@@ -214,8 +217,10 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                       currentAccountPicture: const CircleAvatar(
                         backgroundColor: Colors.white,
-                        backgroundImage: AssetImage(
-                          'assets/images/profile.png',
+                        child: Icon(
+                          Icons.person,
+                          color: Colors.deepPurple,
+                          size: 40,
                         ),
                       ),
                     ),
@@ -241,6 +246,42 @@ class _HomeScreenState extends State<HomeScreen> {
                       onTap:
                           () => _navigateWithDrawerReopen(const WalletScreen()),
                     ),
+
+                    ListTile(
+                      leading: const Icon(Icons.history, color: Colors.white),
+                      title: const Text(
+                        'History',
+                        style: TextStyle(color: Colors.white),
+                      ),
+                      onTap:
+                          () =>
+                              _navigateWithDrawerReopen(const HistoryScreen()),
+                    ),
+                    ListTile(
+                      leading: const Icon(
+                        Icons.support_agent,
+                        color: Colors.white,
+                      ),
+                      title: const Text(
+                        'Contact Us',
+                        style: TextStyle(color: Colors.white),
+                      ),
+                      onTap:
+                          () => _navigateWithDrawerReopen(
+                            const ContactUsScreen(),
+                          ),
+                    ),
+                    ListTile(
+                      leading: const Icon(Icons.drive_eta, color: Colors.white),
+                      title: const Text(
+                        'Become a Driver',
+                        style: TextStyle(color: Colors.white),
+                      ),
+                      onTap:
+                          () => _navigateWithDrawerReopen(
+                            const BecomeDriverScreen(),
+                          ),
+                    ),
                   ],
                 ),
               ),
@@ -257,6 +298,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ),
       ),
+
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
