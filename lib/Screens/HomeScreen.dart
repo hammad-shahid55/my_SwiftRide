@@ -7,6 +7,7 @@ import 'package:swift_ride/Screens/LocationSelectionScreen.dart';
 import 'package:swift_ride/Screens/SettingsScreen.dart';
 import 'package:swift_ride/Screens/WalletScreen.dart';
 import 'package:swift_ride/Screens/WelcomeScreen.dart';
+import 'package:swift_ride/Widgets/app_drawer.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -51,7 +52,9 @@ class _HomeScreenState extends State<HomeScreen> {
                 : user.email?.split('@').first ?? 'User';
       });
     } else {
-      userName = 'Guest';
+      setState(() {
+        userName = 'Guest';
+      });
     }
   }
 
@@ -184,184 +187,85 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ),
       ),
-      drawer: Drawer(
-        child: Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              colors: [Colors.deepPurple, Color.fromARGB(255, 156, 123, 214)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-          ),
-          child: Column(
-            children: [
-              Expanded(
-                child: ListView(
-                  padding: EdgeInsets.zero,
-                  children: [
-                    UserAccountsDrawerHeader(
-                      decoration: const BoxDecoration(
-                        color: Color.fromARGB(255, 106, 63, 207),
-                      ),
-                      accountName: Text(
-                        'Hello, $userName',
-                        style: const TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
-                      ),
-                      accountEmail: const Text(
-                        "Enjoy your ride...!",
-                        style: TextStyle(color: Colors.white),
-                      ),
-                      currentAccountPicture: const CircleAvatar(
-                        backgroundColor: Colors.white,
-                        child: Icon(
-                          Icons.person,
-                          color: Colors.deepPurple,
-                          size: 40,
-                        ),
-                      ),
-                    ),
-                    ListTile(
-                      leading: const Icon(Icons.settings, color: Colors.white),
-                      title: const Text(
-                        'Settings',
-                        style: TextStyle(color: Colors.white),
-                      ),
-                      onTap:
-                          () =>
-                              _navigateWithDrawerReopen(const SettingsScreen()),
-                    ),
-                    ListTile(
-                      leading: const Icon(
-                        Icons.account_balance_wallet,
-                        color: Colors.white,
-                      ),
-                      title: const Text(
-                        'Wallet',
-                        style: TextStyle(color: Colors.white),
-                      ),
-                      onTap:
-                          () => _navigateWithDrawerReopen(const WalletScreen()),
-                    ),
+      drawer: AppDrawer(
+        userName: userName,
+        onLogout: _logout,
+        onNavigate: _navigateWithDrawerReopen,
+      ),
 
-                    ListTile(
-                      leading: const Icon(Icons.history, color: Colors.white),
-                      title: const Text(
-                        'History',
-                        style: TextStyle(color: Colors.white),
+      body: RefreshIndicator(
+        onRefresh: () async {
+          await fetchUserName();
+          await fetchRecentLocations();
+        },
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              GestureDetector(
+                onTap: () => navigateToLocationSelection(),
+                child: AbsorbPointer(
+                  child: TextField(
+                    decoration: InputDecoration(
+                      prefixIcon: const Icon(Icons.search),
+                      hintText: 'Where are you going?',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(30),
                       ),
-                      onTap:
-                          () =>
-                              _navigateWithDrawerReopen(const HistoryScreen()),
+                      contentPadding: const EdgeInsets.symmetric(vertical: 0),
                     ),
-                    ListTile(
-                      leading: const Icon(
-                        Icons.support_agent,
-                        color: Colors.white,
-                      ),
-                      title: const Text(
-                        'Contact Us',
-                        style: TextStyle(color: Colors.white),
-                      ),
-                      onTap:
-                          () => _navigateWithDrawerReopen(
-                            const ContactUsScreen(),
-                          ),
-                    ),
-                    ListTile(
-                      leading: const Icon(Icons.drive_eta, color: Colors.white),
-                      title: const Text(
-                        'Become a Driver',
-                        style: TextStyle(color: Colors.white),
-                      ),
-                      onTap:
-                          () => _navigateWithDrawerReopen(
-                            const BecomeDriverScreen(),
-                          ),
-                    ),
-                  ],
+                  ),
                 ),
               ),
-              const Divider(color: Colors.white70),
-              ListTile(
-                leading: const Icon(Icons.logout, color: Colors.white),
-                title: const Text(
-                  'Logout',
-                  style: TextStyle(color: Colors.white),
+              const SizedBox(height: 16),
+              if (recentLocations.isNotEmpty)
+                Wrap(
+                  spacing: 8,
+                  children:
+                      recentLocations.map((location) {
+                        return Chip(
+                          avatar: const Icon(Icons.history),
+                          label: GestureDetector(
+                            onTap:
+                                () => navigateToLocationSelection(
+                                  prefill: location['address'],
+                                ),
+                            child: Text(location['address']),
+                          ),
+                          deleteIcon: const Icon(Icons.close),
+                          onDeleted: () => deleteLocation(location['id']),
+                        );
+                      }).toList(),
                 ),
-                onTap: _logout,
+              const SizedBox(height: 24),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'All lines',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+                  ),
+                  GestureDetector(
+                    onTap: toggleHistoryView,
+                    child: Text(
+                      showAllHistory ? 'HIDE ALL' : 'VIEW ALL',
+                      style: const TextStyle(
+                        color: Colors.blue,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              const SizedBox(
+                height: 300,
+                child: Center(child: Text('No lines available')),
               ),
             ],
           ),
-        ),
-      ),
-
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            GestureDetector(
-              onTap: () => navigateToLocationSelection(),
-              child: AbsorbPointer(
-                child: TextField(
-                  decoration: InputDecoration(
-                    prefixIcon: const Icon(Icons.search),
-                    hintText: 'Where are you going?',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(30),
-                    ),
-                    contentPadding: const EdgeInsets.symmetric(vertical: 0),
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-            if (recentLocations.isNotEmpty)
-              Wrap(
-                spacing: 8,
-                children:
-                    recentLocations.map((location) {
-                      return Chip(
-                        avatar: const Icon(Icons.history),
-                        label: GestureDetector(
-                          onTap:
-                              () => navigateToLocationSelection(
-                                prefill: location['address'],
-                              ),
-                          child: Text(location['address']),
-                        ),
-                        deleteIcon: const Icon(Icons.close),
-                        onDeleted: () => deleteLocation(location['id']),
-                      );
-                    }).toList(),
-              ),
-            const SizedBox(height: 24),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  'All lines',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
-                ),
-                GestureDetector(
-                  onTap: toggleHistoryView,
-                  child: Text(
-                    showAllHistory ? 'HIDE ALL' : 'VIEW ALL',
-                    style: const TextStyle(
-                      color: Colors.blue,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            const Expanded(child: Center(child: Text('No lines available'))),
-          ],
         ),
       ),
     );
