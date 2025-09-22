@@ -3,6 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:swift_ride/Screens/LocationSelectionScreen.dart';
 import 'package:swift_ride/Screens/SettingsScreen.dart';
 import 'package:swift_ride/Screens/WalletScreen.dart';
+import 'package:swift_ride/Screens/WelcomeScreen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -130,6 +131,40 @@ class _HomeScreenState extends State<HomeScreen> {
     _scaffoldKey.currentState?.openDrawer(); // Reopen drawer on return
   }
 
+  Future<void> _logout() async {
+    Navigator.pop(context); // Close drawer
+    final shouldLogout = await showDialog<bool>(
+      context: context,
+      builder:
+          (context) => AlertDialog(
+            title: const Text("Logout"),
+            content: const Text("Are you sure you want to log out?"),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text("Cancel"),
+              ),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                onPressed: () => Navigator.pop(context, true),
+                child: const Text("Logout"),
+              ),
+            ],
+          ),
+    );
+
+    if (shouldLogout == true) {
+      await supabase.auth.signOut();
+      if (mounted) {
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(builder: (_) => const WelcomeScreen()),
+          (route) => false,
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -155,48 +190,68 @@ class _HomeScreenState extends State<HomeScreen> {
               end: Alignment.bottomRight,
             ),
           ),
-          child: ListView(
-            padding: EdgeInsets.zero,
+          child: Column(
             children: [
-              UserAccountsDrawerHeader(
-                decoration: const BoxDecoration(
-                  color: Color.fromARGB(255, 106, 63, 207),
-                ),
-                accountName: Text(
-                  'Hello, $userName',
-                  style: const TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
-                ),
-                accountEmail: const Text(
-                  "Enjoy your ride...!",
-                  style: TextStyle(color: Colors.white),
-                ),
-                currentAccountPicture: const CircleAvatar(
-                  backgroundColor: Colors.white,
-                  backgroundImage: AssetImage('assets/images/profile.png'),
+              Expanded(
+                child: ListView(
+                  padding: EdgeInsets.zero,
+                  children: [
+                    UserAccountsDrawerHeader(
+                      decoration: const BoxDecoration(
+                        color: Color.fromARGB(255, 106, 63, 207),
+                      ),
+                      accountName: Text(
+                        'Hello, $userName',
+                        style: const TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                      accountEmail: const Text(
+                        "Enjoy your ride...!",
+                        style: TextStyle(color: Colors.white),
+                      ),
+                      currentAccountPicture: const CircleAvatar(
+                        backgroundColor: Colors.white,
+                        backgroundImage: AssetImage(
+                          'assets/images/profile.png',
+                        ),
+                      ),
+                    ),
+                    ListTile(
+                      leading: const Icon(Icons.settings, color: Colors.white),
+                      title: const Text(
+                        'Settings',
+                        style: TextStyle(color: Colors.white),
+                      ),
+                      onTap:
+                          () =>
+                              _navigateWithDrawerReopen(const SettingsScreen()),
+                    ),
+                    ListTile(
+                      leading: const Icon(
+                        Icons.account_balance_wallet,
+                        color: Colors.white,
+                      ),
+                      title: const Text(
+                        'Wallet',
+                        style: TextStyle(color: Colors.white),
+                      ),
+                      onTap:
+                          () => _navigateWithDrawerReopen(const WalletScreen()),
+                    ),
+                  ],
                 ),
               ),
+              const Divider(color: Colors.white70),
               ListTile(
-                leading: const Icon(Icons.settings, color: Colors.white),
+                leading: const Icon(Icons.logout, color: Colors.white),
                 title: const Text(
-                  'Settings',
+                  'Logout',
                   style: TextStyle(color: Colors.white),
                 ),
-                onTap: () => _navigateWithDrawerReopen(const SettingsScreen()),
-              ),
-              ListTile(
-                leading: const Icon(
-                  Icons.account_balance_wallet,
-                  color: Colors.white,
-                ),
-                title: const Text(
-                  'Wallet',
-                  style: TextStyle(color: Colors.white),
-                ),
-                onTap: () => _navigateWithDrawerReopen(const WalletScreen()),
+                onTap: _logout,
               ),
             ],
           ),
