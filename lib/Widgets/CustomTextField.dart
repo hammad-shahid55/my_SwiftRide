@@ -5,7 +5,7 @@ class CustomTextField extends StatefulWidget {
   final String hintText;
   final IconData? suffixIcon;
   final bool isPassword;
-  final bool isEmail; // ✅ new flag for email
+  final bool isEmail;
   final TextEditingController controller;
 
   const CustomTextField({
@@ -15,23 +15,29 @@ class CustomTextField extends StatefulWidget {
     required this.controller,
     this.suffixIcon,
     this.isPassword = false,
-    this.isEmail = false, // ✅ default false
+    this.isEmail = false,
   });
 
   @override
-  _CustomTextFieldState createState() => _CustomTextFieldState();
+  CustomTextFieldState createState() => CustomTextFieldState();
 }
 
-class _CustomTextFieldState extends State<CustomTextField> {
+// ✅ Made public so it can be used with GlobalKey<CustomTextFieldState>
+class CustomTextFieldState extends State<CustomTextField> {
   bool _isPasswordVisible = false;
   String? _errorText;
 
   String? _validate(String value) {
+    if (value.isEmpty) {
+      return '${widget.label} cannot be empty';
+    }
+
     if (widget.isEmail) {
-      if (!value.endsWith('@must.com')) {
-        return 'Email must be in must@gmail.com format';
+      if (!value.contains('@') || !value.contains('.')) {
+        return 'Enter a valid email (example@gmail.com)';
       }
     }
+
     if (widget.isPassword) {
       final hasUpper = value.contains(RegExp(r'[A-Z]'));
       final hasLower = value.contains(RegExp(r'[a-z]'));
@@ -41,7 +47,18 @@ class _CustomTextFieldState extends State<CustomTextField> {
         return 'Password must have upper, lower, digit & symbol';
       }
     }
+
     return null;
+  }
+
+  /// ✅ New method to trigger validation manually
+  bool validateNow() {
+    final value = widget.controller.text.trim();
+    final error = _validate(value);
+    setState(() {
+      _errorText = error;
+    });
+    return error == null; // return true if valid
   }
 
   @override
@@ -104,26 +121,23 @@ class _CustomTextFieldState extends State<CustomTextField> {
                         )
                         : null),
             filled: true,
-            fillColor: const Color.fromRGBO(255, 255, 255, 1),
+            fillColor: Colors.white,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
               borderSide: const BorderSide(
                 color: Color.fromRGBO(226, 223, 223, 1),
-                width: 1.2,
               ),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
               borderSide: const BorderSide(
                 color: Color.fromRGBO(226, 223, 223, 1),
-                width: 1.2,
               ),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
               borderSide: const BorderSide(
                 color: Color.fromRGBO(226, 223, 223, 1),
-                width: 1.2,
               ),
             ),
             errorText: _errorText,
