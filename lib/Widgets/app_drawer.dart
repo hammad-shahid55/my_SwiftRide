@@ -32,38 +32,56 @@ class AppDrawer extends StatelessWidget {
         ),
         child: Column(
           children: [
+            // Custom centered header
+            Container(
+              padding: const EdgeInsets.all(20),
+              width: double.infinity,
+              decoration: const BoxDecoration(
+                color: Color.fromARGB(255, 106, 63, 207),
+              ),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const SizedBox(height: 10),
+                  const CircleAvatar(
+                    radius: 40,
+                    backgroundColor: Colors.white,
+                    child: Icon(
+                      Icons.person,
+                      color: Colors.deepPurple,
+                      size: 50,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    'Hello, $userName',
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                  const SizedBox(height: 5),
+                  const Text(
+                    "Enjoy your ride...!!",
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            // Divider below header
+            const Divider(color: Colors.white70, thickness: 1, height: 0),
+
+            const SizedBox(height: 10),
+
             Expanded(
               child: ListView(
                 padding: EdgeInsets.zero,
                 children: [
-                  UserAccountsDrawerHeader(
-                    decoration: const BoxDecoration(
-                      color: Color.fromARGB(255, 106, 63, 207),
-                    ),
-                    accountName: Text(
-                      'Hello, $userName',
-                      style: const TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
-                    accountEmail: const Text(
-                      "Enjoy your ride...!!",
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    currentAccountPicture: const CircleAvatar(
-                      backgroundColor: Colors.white,
-                      child: Icon(
-                        Icons.person,
-                        color: Colors.deepPurple,
-                        size: 40,
-                      ),
-                    ),
-                  ),
                   ListTile(
                     leading: const Icon(Icons.settings, color: Colors.white),
                     title: const Text(
@@ -153,7 +171,8 @@ class AppDrawer extends StatelessWidget {
                 ],
               ),
             ),
-            const Divider(color: Colors.white70),
+
+            const Divider(color: Colors.white70, thickness: 1),
             ListTile(
               leading: const Icon(Icons.logout, color: Colors.white),
               title: const Text(
