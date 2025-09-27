@@ -32,7 +32,7 @@ class _LocationSelectionScreenState extends State<LocationSelectionScreen> {
       place.locality,
       place.subAdministrativeArea,
       place.administrativeArea,
-      place.country
+      place.country,
     ];
 
     for (final candidate in cityCandidates) {
@@ -51,10 +51,12 @@ class _LocationSelectionScreenState extends State<LocationSelectionScreen> {
         var result = await googlePlace.autocomplete.get(value);
 
         if (result != null && result.predictions != null) {
-          final filtered = result.predictions!.where((prediction) {
-            final desc = prediction.description?.toLowerCase() ?? '';
-            return desc.contains("islamabad") || desc.contains("rawalpindi");
-          }).toList();
+          final filtered =
+              result.predictions!.where((prediction) {
+                final desc = prediction.description?.toLowerCase() ?? '';
+                return desc.contains("islamabad") ||
+                    desc.contains("rawalpindi");
+              }).toList();
 
           setState(() {
             predictions = filtered;
@@ -77,55 +79,55 @@ class _LocationSelectionScreenState extends State<LocationSelectionScreen> {
     }
   }
 
- Future<void> setCurrentLocation(String field) async {
-  try {
-    final position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high);
-    final placemarks = await placemarkFromCoordinates(
-        position.latitude, position.longitude);
+  Future<void> setCurrentLocation(String field) async {
+    try {
+      final position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+      );
+      final placemarks = await placemarkFromCoordinates(
+        position.latitude,
+        position.longitude,
+      );
 
-    if (placemarks.isNotEmpty) {
-      final place = placemarks.first;
+      if (placemarks.isNotEmpty) {
+        final place = placemarks.first;
 
-      final address = '${place.name}, ${place.street}, ${place.locality}, ${place.country}';
+        final address =
+            '${place.name}, ${place.street}, ${place.locality}, ${place.country}';
 
+        setState(() {
+          if (field == 'from') {
+            fromController.text = address;
+          } else {
+            toController.text = address;
+          }
+        });
+      }
+    } catch (e) {
+      debugPrint("Location error: $e");
       setState(() {
         if (field == 'from') {
-          fromController.text = address;
+          fromController.text = 'Current Location';
         } else {
-          toController.text = address;
+          toController.text = 'Current Location';
         }
       });
     }
-  } catch (e) {
-    debugPrint("Location error: $e");
-    setState(() {
-      if (field == 'from') {
-        fromController.text = 'Current Location';
-      } else {
-        toController.text = 'Current Location';
-      }
-    });
   }
-}
 
-
-  Future<void> saveLocationToHistory(String address) async {
+  /// ✅ FIXED INSERT: Don't send id or inserted_at, DB will auto-fill
+  Future<void> saveLocationToHistory(String address, String type) async {
     final user = supabase.auth.currentUser;
     if (user == null) return;
 
-    final existing = await supabase
-        .from('location_history')
-        .select('id')
-        .eq('user_id', user.id)
-        .eq('address', address)
-        .limit(1);
-
-    if (existing.isEmpty) {
+    try {
       await supabase.from('location_history').insert({
         'user_id': user.id,
         'address': address,
+        'type': type,
       });
+    } catch (e) {
+      debugPrint("Save history error: $e");
     }
   }
 
@@ -141,8 +143,9 @@ class _LocationSelectionScreenState extends State<LocationSelectionScreen> {
         .limit(10);
 
     setState(() {
-      locationHistory =
-          List<Map<String, dynamic>>.from(response as List<dynamic>);
+      locationHistory = List<Map<String, dynamic>>.from(
+        response as List<dynamic>,
+      );
     });
   }
 
@@ -199,41 +202,46 @@ class _LocationSelectionScreenState extends State<LocationSelectionScreen> {
     return predictions.isEmpty
         ? const SizedBox.shrink()
         : ListView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: predictions.length,
-            itemBuilder: (context, index) {
-              final prediction = predictions[index];
-              return Card(
-                margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                elevation: 2,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: predictions.length,
+          itemBuilder: (context, index) {
+            final prediction = predictions[index];
+            return Card(
+              margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              elevation: 2,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: ListTile(
+                leading: const Icon(
+                  Icons.location_on,
+                  color: Colors.deepPurple,
                 ),
-                child: ListTile(
-                  leading: const Icon(Icons.location_on, color: Colors.deepPurple),
-                  title: Text(prediction.description ?? ''),
-                  onTap: () {
-                    final selectedAddress = prediction.description ?? '';
-                    setState(() {
-                      if (activeField == 'from') {
-                        fromController.text = selectedAddress;
-                      } else {
-                        toController.text = selectedAddress;
-                      }
-                      predictions = [];
-                    });
-                  },
-                ),
-              );
-            },
-          );
+                title: Text(prediction.description ?? ''),
+                onTap: () {
+                  final selectedAddress = prediction.description ?? '';
+                  setState(() {
+                    if (activeField == 'from') {
+                      fromController.text = selectedAddress;
+                      saveLocationToHistory(selectedAddress, 'from');
+                    } else {
+                      toController.text = selectedAddress;
+                      saveLocationToHistory(selectedAddress, 'to');
+                    }
+                    predictions = [];
+                  });
+                },
+              ),
+            );
+          },
+        );
   }
 
   @override
   void initState() {
     super.initState();
-    setCurrentLocation('from');  // Set current location for from field initially
+    setCurrentLocation('from'); // Set current location for from field initially
     fetchLocationHistory();
     toFocusNode.requestFocus();
     if (widget.initialValue != null) {
@@ -260,7 +268,7 @@ class _LocationSelectionScreenState extends State<LocationSelectionScreen> {
       body: SingleChildScrollView(
         child: Column(
           children: [
-            // From field with current location and map buttons
+            // From field
             Padding(
               padding: const EdgeInsets.all(12.0),
               child: TextField(
@@ -287,12 +295,14 @@ class _LocationSelectionScreenState extends State<LocationSelectionScreen> {
                           final result = await Navigator.push(
                             context,
                             MaterialPageRoute(
-                                builder: (_) => const SetLocationMapScreen()),
+                              builder: (_) => const SetLocationMapScreen(),
+                            ),
                           );
 
                           if (result != null && result['address'] != null) {
                             setState(() {
                               fromController.text = result['address'];
+                              saveLocationToHistory(result['address'], 'from');
                             });
                           }
                         },
@@ -304,14 +314,15 @@ class _LocationSelectionScreenState extends State<LocationSelectionScreen> {
                     ],
                   ),
                   border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12)),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
               ),
             ),
 
             const Icon(Icons.swap_vert, size: 32),
 
-            // To field with current location and map buttons
+            // To field
             Padding(
               padding: const EdgeInsets.all(12.0),
               child: TextField(
@@ -339,12 +350,14 @@ class _LocationSelectionScreenState extends State<LocationSelectionScreen> {
                           final result = await Navigator.push(
                             context,
                             MaterialPageRoute(
-                                builder: (_) => const SetLocationMapScreen()),
+                              builder: (_) => const SetLocationMapScreen(),
+                            ),
                           );
 
                           if (result != null && result['address'] != null) {
                             setState(() {
                               toController.text = result['address'];
+                              saveLocationToHistory(result['address'], 'to');
                             });
                           }
                         },
@@ -356,7 +369,8 @@ class _LocationSelectionScreenState extends State<LocationSelectionScreen> {
                     ],
                   ),
                   border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12)),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
               ),
             ),
@@ -389,8 +403,10 @@ class _LocationSelectionScreenState extends State<LocationSelectionScreen> {
                   if (fromCity.isEmpty || toCity.isEmpty) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
-                          content: Text(
-                              'Please enter valid locations including Islamabad or Rawalpindi')),
+                        content: Text(
+                          'Please enter valid locations including Islamabad or Rawalpindi',
+                        ),
+                      ),
                     );
                     return;
                   }
@@ -398,17 +414,16 @@ class _LocationSelectionScreenState extends State<LocationSelectionScreen> {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (_) => TripSelectionScreen(
-                        from: fromCity,
-                        to: toCity,
-                      ),
+                      builder:
+                          (_) =>
+                              TripSelectionScreen(from: fromCity, to: toCity),
                     ),
                   );
                 } else {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
-                        content:
-                            Text('Please enter both From and To addresses')),
+                      content: Text('Please enter both From and To addresses'),
+                    ),
                   );
                 }
               },

@@ -1,58 +1,63 @@
 import 'package:flutter/material.dart';
 
-class TermsAndConditionsScreen extends StatelessWidget {
-  const TermsAndConditionsScreen({super.key});
+class PrivacyPolicyScreen extends StatelessWidget {
+  const PrivacyPolicyScreen({super.key});
 
-  final List<Map<String, String>> _termsPoints = const [
+  final List<Map<String, String>> _policyPoints = const [
     {
-      "title": "Acceptance of Terms",
+      "title": "Information Collection",
       "desc":
-          "By using SwiftRide, you agree to these Terms and Conditions and our Privacy Policy. If you do not agree, you must stop using the service.",
+          "We collect your name, email, phone number, profile picture, payment method, and ride details to provide better services.",
     },
     {
-      "title": "Eligibility",
+      "title": "Data Usage",
       "desc":
-          "You must be at least 18 years old to create an account and use SwiftRide services. Minors must be accompanied by a responsible adult.",
+          "Your data is used for booking rides, processing payments, customer support, and improving our platform performance.",
     },
     {
-      "title": "Account Responsibility",
+      "title": "Data Sharing",
       "desc":
-          "You are responsible for maintaining the confidentiality of your login details and all activities under your account.",
+          "We do not sell your information. Data is only shared with drivers, service partners, and regulatory authorities when required.",
     },
     {
-      "title": "Ride Booking & Payment",
+      "title": "Security",
       "desc":
-          "All rides must be booked through the app. Payments are processed securely via integrated payment gateways. Cancellation fees may apply.",
+          "All sensitive data is encrypted, stored securely, and monitored to protect against unauthorized access.",
     },
     {
-      "title": "User Conduct",
+      "title": "Your Rights",
       "desc":
-          "You agree not to misuse the platform, harass drivers or passengers, damage vehicles, or engage in unlawful activity while using SwiftRide.",
+          "You may request account deletion, data export, or correction of your personal information at any time.",
     },
     {
-      "title": "Driver & Passenger Safety",
+      "title": "Location Data",
       "desc":
-          "Both drivers and passengers must follow safety guidelines, including wearing seatbelts and complying with traffic laws.",
+          "SwiftRide collects and uses precise location data for pickups, drop-offs, route optimization, and safety monitoring.",
     },
     {
-      "title": "Service Availability",
+      "title": "Cookies & Tracking",
       "desc":
-          "SwiftRide aims to provide reliable services but does not guarantee uninterrupted availability due to maintenance, technical issues, or unforeseen events.",
+          "We use cookies, analytics tools, and tracking technologies to personalize your experience and improve app performance.",
     },
     {
-      "title": "Termination of Service",
+      "title": "Third-Party Services",
       "desc":
-          "SwiftRide reserves the right to suspend or terminate your account if you violate these Terms, engage in fraud, or misuse the platform.",
+          "We may integrate with payment processors, map providers, and communication platforms, which may collect limited data as per their own policies.",
     },
     {
-      "title": "Limitation of Liability",
+      "title": "Data Retention",
       "desc":
-          "SwiftRide is not liable for delays, accidents, loss of property, or damages arising from the use of the service, except where required by law.",
+          "We retain your personal and ride history data only as long as necessary to provide services or meet legal obligations.",
     },
     {
-      "title": "Amendments",
+      "title": "Children’s Privacy",
       "desc":
-          "We may update these Terms & Conditions from time to time. Continued use of the app after updates means you accept the revised terms.",
+          "SwiftRide does not knowingly collect data from individuals under 13. If discovered, such accounts will be deleted immediately.",
+    },
+    {
+      "title": "Policy Updates",
+      "desc":
+          "We may update this Privacy Policy from time to time. Any significant changes will be communicated to users.",
     },
   ];
 
@@ -61,7 +66,7 @@ class TermsAndConditionsScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text(
-          "Terms & Conditions",
+          "Privacy Policy",
           style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
         ),
         backgroundColor: Colors.deepPurple,
@@ -74,9 +79,9 @@ class TermsAndConditionsScreen extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Text(
-                "Welcome to SwiftRide’s Terms & Conditions.\n\n"
-                "Please read these terms carefully before using our services. "
-                "By continuing, you acknowledge and agree to the following:",
+                "Welcome to SwiftRide’s Privacy Policy.\n\n"
+                "We value your privacy and are committed to protecting your personal information. "
+                "Here’s how we handle your data:",
                 style: TextStyle(
                   fontSize: 16,
                   height: 1.5,
@@ -87,7 +92,7 @@ class TermsAndConditionsScreen extends StatelessWidget {
               const SizedBox(height: 20),
 
               // Numbered List
-              ..._termsPoints.asMap().entries.map((entry) {
+              ..._policyPoints.asMap().entries.map((entry) {
                 final index = entry.key + 1;
                 final point = entry.value;
                 return Padding(
@@ -118,7 +123,7 @@ class TermsAndConditionsScreen extends StatelessWidget {
 
               const SizedBox(height: 20),
               const Text(
-                "If you have any questions about these Terms, please contact us at support@swiftride.com.",
+                "If you have any questions, please contact us at support@swiftride.com.",
                 style: TextStyle(fontSize: 15, height: 1.5),
                 textAlign: TextAlign.justify,
               ),

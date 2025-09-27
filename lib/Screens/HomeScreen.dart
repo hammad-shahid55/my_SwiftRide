@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'package:swift_ride/Screens/LocationSelectionScreen.dart';
-import 'package:swift_ride/Screens/WelcomeScreen.dart';
+import 'package:swift_ride/Screens/SignInScreen.dart';
+
 import 'package:swift_ride/Widgets/app_drawer.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -20,7 +21,7 @@ class _HomeScreenState extends State<HomeScreen> {
   List<Map<String, dynamic>> recentLocations = [];
   bool showAllHistory = false;
 
-  DateTime? lastBackPressTime; // ✅ for double back press
+  DateTime? lastBackPressTime;
 
   @override
   void initState() {
@@ -124,8 +125,6 @@ class _HomeScreenState extends State<HomeScreen> {
           .update({'inserted_at': DateTime.now().toIso8601String()})
           .eq('id', id);
     }
-
-    await fetchRecentLocations();
   }
 
   Future<void> _navigateWithDrawerReopen(Widget screen) async {
@@ -161,14 +160,13 @@ class _HomeScreenState extends State<HomeScreen> {
       if (mounted) {
         Navigator.pushAndRemoveUntil(
           context,
-          MaterialPageRoute(builder: (_) => const WelcomeScreen()),
+          MaterialPageRoute(builder: (_) => const SignInScreen()),
           (route) => false,
         );
       }
     }
   }
 
-  /// ✅ Handle back press (Double Tap to Exit)
   Future<bool> _onWillPop() async {
     final now = DateTime.now();
     if (lastBackPressTime == null ||
@@ -180,15 +178,15 @@ class _HomeScreenState extends State<HomeScreen> {
           duration: Duration(seconds: 2),
         ),
       );
-      return false; // don’t exit
+      return false;
     }
-    return true; // exit on 2nd press
+    return true;
   }
 
   @override
   Widget build(BuildContext context) {
     return WillPopScope(
-      onWillPop: _onWillPop, // ✅ wrap with WillPopScope
+      onWillPop: _onWillPop,
       child: Scaffold(
         key: _scaffoldKey,
         appBar: AppBar(
