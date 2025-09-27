@@ -25,37 +25,3 @@ class MainApp extends StatelessWidget {
     return MaterialApp(debugShowCheckedModeBanner: false, home: SplashScreen());
   }
 }
-
-// const SizedBox(height: 16),
-//             ElevatedButton.icon(
-//               icon: const Icon(Icons.directions),
-//               label: const Text("Show Route"),
-//               onPressed: () async {
-//                 if (fromController.text.isNotEmpty &&
-//                     toController.text.isNotEmpty) {
-//                   await saveLocationToHistory(toController.text);
-//                   Navigator.push(
-//                     context,
-//                     MaterialPageRoute(
-//                       builder: (_) => DirectionsMapScreen(
-//                         fromAddress: fromController.text,
-//                         toAddress: toController.text,
-//                       ),
-//                     ),
-//                   );
-//                 } else {
-//                   ScaffoldMessenger.of(context).showSnackBar(
-//                     const SnackBar(
-//                         content:
-//                             Text('Please enter both From and To addresses')),
-//                   );
-//                 }
-//               },
-//             ),
-//             const SizedBox(height: 24),
-//           ],
-//         ),
-//       ),
-//     );
-//   }
-// }
