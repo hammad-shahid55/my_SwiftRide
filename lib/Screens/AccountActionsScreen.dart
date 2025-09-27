@@ -5,13 +5,49 @@ import 'package:swift_ride/Screens/WelcomeScreen.dart';
 class AccountActionsScreen extends StatelessWidget {
   const AccountActionsScreen({super.key});
 
+  Future<void> _resetPassword(BuildContext context) async {
+    final supabase = Supabase.instance.client;
+    final user = supabase.auth.currentUser;
+
+    if (user == null || user.email == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("No user is logged in."),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    try {
+      await supabase.auth.resetPasswordForEmail(
+        user.email!,
+        redirectTo: "swiftride://reset-password", // 👈 your deep link URL
+      );
+
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Password reset link sent to ${user.email}"),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Error: $e"), backgroundColor: Colors.red),
+        );
+      }
+    }
+  }
+
   Future<void> _deleteAccount(BuildContext context) async {
     final supabase = Supabase.instance.client;
     final user = supabase.auth.currentUser;
 
     if (user == null) return;
 
-    // Confirmation dialog
     final confirm = await showDialog<bool>(
       context: context,
       builder:
@@ -51,10 +87,8 @@ class AccountActionsScreen extends StatelessWidget {
     if (confirm != true) return;
 
     try {
-      // ⚡ Step 1: Delete user-related data
       await supabase.from('location_history').delete().eq('user_id', user.id);
 
-      // ⚡ Step 2: Call Edge Function to delete user from Auth
       final response = await supabase.functions.invoke(
         'delete-user',
         body: {'user_id': user.id},
@@ -64,10 +98,8 @@ class AccountActionsScreen extends StatelessWidget {
         throw Exception("Failed to delete account: ${response.data}");
       }
 
-      // ⚡ Step 3: Sign out locally
       await supabase.auth.signOut();
 
-      // ⚡ Step 4: Show success + Navigate
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -136,9 +168,7 @@ class AccountActionsScreen extends StatelessWidget {
                   size: 16,
                   color: Colors.deepPurple,
                 ),
-                onTap: () {
-                  // TODO: Reset password logic
-                },
+                onTap: () => _resetPassword(context),
               ),
             ),
             const SizedBox(height: 10),
