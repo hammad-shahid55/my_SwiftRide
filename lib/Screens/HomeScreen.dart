@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'package:swift_ride/Screens/LocationSelectionScreen.dart';
-import 'package:swift_ride/Screens/WelcomeScreen.dart';
+import 'package:swift_ride/Screens/SignInScreen.dart';
+
 import 'package:swift_ride/Widgets/app_drawer.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -159,7 +160,7 @@ class _HomeScreenState extends State<HomeScreen> {
       if (mounted) {
         Navigator.pushAndRemoveUntil(
           context,
-          MaterialPageRoute(builder: (_) => const WelcomeScreen()),
+          MaterialPageRoute(builder: (_) => const SignInScreen()),
           (route) => false,
         );
       }
