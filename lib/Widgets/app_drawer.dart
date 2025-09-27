@@ -81,7 +81,7 @@ class AppDrawer extends StatelessWidget {
                   ListTile(
                     leading: const Icon(Icons.history, color: Colors.white),
                     title: const Text(
-                      'History',
+                      'Trips History',
                       style: TextStyle(color: Colors.white),
                     ),
                     onTap: () => onNavigate(const HistoryScreen()),
