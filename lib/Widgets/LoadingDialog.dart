@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 class LoadingDialog {
   static void show(BuildContext context, {required String message}) {
     final double screenWidth = MediaQuery.of(context).size.width;
-    final double screenHeight = MediaQuery.of(context).size.height;
 
     showDialog(
       context: context,
@@ -16,9 +15,7 @@ class LoadingDialog {
             Positioned.fill(
               child: BackdropFilter(
                 filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
-                child: Container(
-                  color: Colors.black.withOpacity(0.2), // Dimmed effect
-                ),
+                child: Container(color: Colors.black.withOpacity(0.2)),
               ),
             ),
             // Centered Dialog Box
@@ -27,14 +24,12 @@ class LoadingDialog {
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
-                elevation: 0, // Disable default elevation
+                elevation: 0,
                 child: Container(
-                  width: screenWidth * 0.9, // 90% of screen width
-                  height: screenHeight * 0.25, // 25% of screen height
-                  padding: EdgeInsets.symmetric(
-                    horizontal:
-                        screenWidth * 0.25, // Dynamic horizontal padding
-                    vertical: screenHeight * 0.05, // Dynamic vertical padding
+                  width: screenWidth * 0.9, // Max width
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 24,
                   ),
                   decoration: BoxDecoration(
                     color: Colors.white,
@@ -47,23 +42,27 @@ class LoadingDialog {
                       ),
                     ],
                   ),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const CircularProgressIndicator(
-                        valueColor: AlwaysStoppedAnimation<Color>(Colors.amber),
-                      ),
-                      SizedBox(height: screenHeight * 0.03), // Responsive gap
-                      Text(
-                        message,
-                        style: const TextStyle(
-                          fontFamily: 'Urbanist',
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
+                  child: SingleChildScrollView(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min, // fit content
+                      children: [
+                        const CircularProgressIndicator(
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            Colors.amber,
+                          ),
                         ),
-                        textAlign: TextAlign.center, // Center align text
-                      ),
-                    ],
+                        const SizedBox(height: 20),
+                        Text(
+                          message,
+                          style: const TextStyle(
+                            fontFamily: 'Urbanist',
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),

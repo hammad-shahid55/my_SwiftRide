@@ -8,7 +8,7 @@
 
     <application
         android:name="${applicationName}"
-        android:label="swift_ride"
+        android:label="Swift Ride"
         android:icon="@mipmap/ic_launcher"
         android:enableOnBackInvokedCallback="true"> <!-- ✅ Stripe theme fix -->
 

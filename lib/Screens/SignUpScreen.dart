@@ -11,7 +11,6 @@ import 'package:swift_ride/Widgets/CustomCheckbox.dart';
 import 'package:swift_ride/Widgets/CustomTextField.dart';
 import 'package:swift_ride/Widgets/CustomTextWidget.dart';
 import 'package:swift_ride/Widgets/GoogleButton.dart';
-
 import 'package:swift_ride/Widgets/LoadingDialog.dart';
 import 'package:swift_ride/Widgets/MainButton.dart';
 import 'package:swift_ride/Widgets/OrDivider.dart';
@@ -31,6 +30,10 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
   final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
+
+  // ✅ Keys for CustomTextField validation
+  final GlobalKey<CustomTextFieldState> emailFieldKey = GlobalKey();
+  final GlobalKey<CustomTextFieldState> passwordFieldKey = GlobalKey();
 
   @override
   void dispose() {
@@ -54,6 +57,14 @@ class _SignUpScreenState extends State<SignUpScreen> {
   }
 
   void signUpUser() async {
+    // ✅ Validate fields first
+    final emailValid = emailFieldKey.currentState?.validateNow() ?? false;
+    final passwordValid = passwordFieldKey.currentState?.validateNow() ?? false;
+
+    if (!emailValid || !passwordValid) {
+      return; // stop if invalid
+    }
+
     final email = emailController.text.trim();
     final password = passwordController.text.trim();
 
@@ -62,13 +73,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
         const SnackBar(
           content: Text('You must agree to the Terms and Privacy Policy.'),
         ),
-      );
-      return;
-    }
-
-    if (email.isEmpty || password.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter email and password')),
       );
       return;
     }
@@ -216,14 +220,16 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      SizedBox(height: screenHeight * 0.03),
                       CustomTextWidget(
                         title: "Let's Get Started!",
                         spacing: 8,
                         subtitle: "Let’s dive into your account",
                       ),
                       SizedBox(height: screenHeight * 0.03),
+
+                      // ✅ Email Field
                       CustomTextField(
+                        key: emailFieldKey,
                         controller: emailController,
                         label: 'Email',
                         hintText: '',
@@ -231,13 +237,17 @@ class _SignUpScreenState extends State<SignUpScreen> {
                         suffixIcon: Icons.email_outlined,
                       ),
                       SizedBox(height: screenHeight * 0.015),
+
+                      // ✅ Password Field
                       CustomTextField(
+                        key: passwordFieldKey,
                         controller: passwordController,
                         label: 'Password',
                         hintText: 'Password',
                         isPassword: true,
                       ),
                       SizedBox(height: screenHeight * 0.02),
+
                       Row(
                         crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
@@ -330,6 +340,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                         ],
                       ),
                       SizedBox(height: screenHeight * 0.025),
+
                       Center(
                         child: GestureDetector(
                           onTap: () {
@@ -365,22 +376,27 @@ class _SignUpScreenState extends State<SignUpScreen> {
                         ),
                       ),
                       SizedBox(height: screenHeight * 0.04),
+
                       OrDivider(),
                       SizedBox(height: screenHeight * 0.04),
+
                       GoogleButton(onPressed: signInWithGoogle),
                       SizedBox(height: screenHeight * 0.02),
+
                       BuildButton(
                         icon: Icons.phone,
                         text: "Continue with Phone",
                         onPressed: continueWithPhone,
                       ),
                       SizedBox(height: screenHeight * 0.06),
+
                       MainButton(
                         text: 'Sign up',
                         backgroundColor: const Color.fromRGBO(123, 61, 244, 1),
                         onPressed: signUpUser,
                       ),
                       SizedBox(height: screenHeight * 0.03),
+
                       const Center(child: PrivacyTermsText()),
                     ],
                   ),
