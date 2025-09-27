@@ -4,6 +4,8 @@ import 'package:swift_ride/Screens/ContactUsScreen.dart';
 import 'package:swift_ride/Screens/HistoryScreen.dart';
 import 'package:swift_ride/Screens/SettingsScreen.dart';
 import 'package:swift_ride/Screens/WalletScreen.dart';
+import 'package:swift_ride/Screens/AccountActionsScreen.dart';
+import 'package:swift_ride/Screens/PrivacyPolicyScreen.dart';
 
 class AppDrawer extends StatelessWidget {
   final String userName;
@@ -47,8 +49,11 @@ class AppDrawer extends StatelessWidget {
                       ),
                     ),
                     accountEmail: const Text(
-                      "Enjoy your ride...!",
-                      style: TextStyle(color: Colors.white),
+                      "Enjoy your ride...!!",
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                     currentAccountPicture: const CircleAvatar(
                       backgroundColor: Colors.white,
@@ -63,7 +68,10 @@ class AppDrawer extends StatelessWidget {
                     leading: const Icon(Icons.settings, color: Colors.white),
                     title: const Text(
                       'Settings',
-                      style: TextStyle(color: Colors.white),
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                     onTap: () => onNavigate(const SettingsScreen()),
                   ),
@@ -74,7 +82,10 @@ class AppDrawer extends StatelessWidget {
                     ),
                     title: const Text(
                       'Wallet',
-                      style: TextStyle(color: Colors.white),
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                     onTap: () => onNavigate(const WalletScreen()),
                   ),
@@ -82,7 +93,10 @@ class AppDrawer extends StatelessWidget {
                     leading: const Icon(Icons.history, color: Colors.white),
                     title: const Text(
                       'Trips History',
-                      style: TextStyle(color: Colors.white),
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                     onTap: () => onNavigate(const HistoryScreen()),
                   ),
@@ -93,15 +107,46 @@ class AppDrawer extends StatelessWidget {
                     ),
                     title: const Text(
                       'Contact Us',
-                      style: TextStyle(color: Colors.white),
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                     onTap: () => onNavigate(const ContactUsScreen()),
+                  ),
+                  ListTile(
+                    leading: const Icon(
+                      Icons.account_circle,
+                      color: Colors.white,
+                    ),
+                    title: const Text(
+                      'Account Actions',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    onTap: () => onNavigate(const AccountActionsScreen()),
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.privacy_tip, color: Colors.white),
+                    title: const Text(
+                      'Privacy Policy',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    onTap: () => onNavigate(const PrivacyPolicyScreen()),
                   ),
                   ListTile(
                     leading: const Icon(Icons.drive_eta, color: Colors.white),
                     title: const Text(
                       'Become a Driver',
-                      style: TextStyle(color: Colors.white),
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                     onTap: () => onNavigate(const BecomeDriverScreen()),
                   ),
@@ -113,7 +158,10 @@ class AppDrawer extends StatelessWidget {
               leading: const Icon(Icons.logout, color: Colors.white),
               title: const Text(
                 'Logout',
-                style: TextStyle(color: Colors.white),
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
               onTap: onLogout,
             ),
