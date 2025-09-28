@@ -30,6 +30,7 @@ class _SplashScreenState extends State<SplashScreen>
   bool _showWavyText = false;
   bool _showLoader = false;
   bool _showSplashContent = true;
+  bool _showTagline = false;
 
   @override
   void initState() {
@@ -55,16 +56,11 @@ class _SplashScreenState extends State<SplashScreen>
       CurvedAnimation(parent: _textSlideController, curve: Curves.easeOut),
     );
 
-    // Start animations after 2 sec
+    // Start animations after delay
     Future.delayed(const Duration(seconds: 2), () {
-      setState(() {
-        _startAnimations = true;
-      });
-
+      setState(() => _startAnimations = true);
       _vanController.forward().whenComplete(() {
-        setState(() {
-          _showSlideText = true;
-        });
+        setState(() => _showSlideText = true);
         _textSlideController.forward().whenComplete(() {
           setState(() {
             _showWavyText = true;
@@ -79,7 +75,6 @@ class _SplashScreenState extends State<SplashScreen>
   Future<void> _checkInternetAndNavigate() async {
     final connectivityResult = await Connectivity().checkConnectivity();
     final hasInternet = connectivityResult != ConnectivityResult.none;
-
     if (!hasInternet) {
       _showNetworkError();
       return;
@@ -92,10 +87,9 @@ class _SplashScreenState extends State<SplashScreen>
         return;
       }
 
-      // Check if first time user
+      // First time user?
       final prefs = await SharedPreferences.getInstance();
       final isFirstTime = prefs.getBool('isFirstTime') ?? true;
-
       if (isFirstTime) {
         await prefs.setBool('isFirstTime', false);
         if (mounted) {
@@ -107,14 +101,13 @@ class _SplashScreenState extends State<SplashScreen>
         return;
       }
 
-      // Check device location
+      // Location check
       bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
       LocationPermission permission = await Geolocator.checkPermission();
 
       if (serviceEnabled &&
           (permission == LocationPermission.always ||
               permission == LocationPermission.whileInUse)) {
-        // Location is already enabled -> direct to HomeScreen
         if (mounted) {
           Navigator.pushReplacement(
             context,
@@ -122,7 +115,6 @@ class _SplashScreenState extends State<SplashScreen>
           );
         }
       } else {
-        // Location not enabled -> show EnableLocationScreen
         if (mounted) {
           Navigator.pushReplacement(
             context,
@@ -147,9 +139,7 @@ class _SplashScreenState extends State<SplashScreen>
           backgroundColor: Colors.red,
         ),
       );
-      setState(() {
-        _showLoader = false;
-      });
+      setState(() => _showLoader = false);
     }
   }
 
@@ -163,117 +153,199 @@ class _SplashScreenState extends State<SplashScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color.fromRGBO(123, 61, 244, 1),
       body: RefreshIndicator(
         onRefresh: () async {
-          setState(() {
-            _showLoader = true;
-          });
+          setState(() => _showLoader = true);
           await _checkInternetAndNavigate();
         },
         child:
             _showSplashContent
-                ? SingleChildScrollView(
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  child: SizedBox(
-                    height: MediaQuery.of(context).size.height,
-                    child: Center(
-                      child:
-                          _startAnimations
-                              ? Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  // Van animation
-                                  SlideTransition(
-                                    position: _vanAnimation,
-                                    child: Image.asset(
-                                      'assets/van_logo.png',
-                                      width:
-                                          MediaQuery.of(context).size.width *
-                                          0.70,
-                                    ),
-                                  ),
+                ? Stack(
+                  children: [
+                    // Gradient background
+                    Container(
+                      decoration: const BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [Color(0xFF7B3DF4), Color(0xFFFD5858)],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                      ),
+                    ),
 
-                                  // Slide text
-                                  if (_showSlideText)
-                                    SlideTransition(
-                                      position: _textSlideAnimation,
-                                      child: Text(
-                                        'SwiftRide',
-                                        style: TextStyle(
-                                          fontSize:
+                    // Decorative circles
+                    Positioned(
+                      top: -80,
+                      right: -80,
+                      child: Container(
+                        width: 200,
+                        height: 200,
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.1),
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                    ),
+                    Positioned(
+                      bottom: -60,
+                      left: -60,
+                      child: Container(
+                        width: 150,
+                        height: 150,
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.1),
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                    ),
+
+                    // Watermark image
+                    Positioned.fill(
+                      child: Opacity(
+                        opacity: 0.05,
+                        child: Image.asset(
+                          'assets/van_logo.png',
+                          fit: BoxFit.contain,
+                          alignment: Alignment.center,
+                        ),
+                      ),
+                    ),
+
+                    // Main splash content
+                    SingleChildScrollView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      child: SizedBox(
+                        height: MediaQuery.of(context).size.height,
+                        child: Center(
+                          child:
+                              _startAnimations
+                                  ? Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      // Van animation
+                                      SlideTransition(
+                                        position: _vanAnimation,
+                                        child: Image.asset(
+                                          'assets/van_logo.png',
+                                          width:
                                               MediaQuery.of(
                                                 context,
                                               ).size.width *
-                                              0.14,
-                                          fontWeight: FontWeight.bold,
-                                          color: const Color.fromRGBO(
-                                            253,
-                                            88,
-                                            88,
-                                            1,
-                                          ),
+                                              0.70,
                                         ),
                                       ),
-                                    ),
 
-                                  // Wavy text animation
-                                  if (_showWavyText)
-                                    AnimatedTextKit(
-                                      animatedTexts: [
-                                        WavyAnimatedText(
-                                          'SwiftRide',
-                                          textStyle: TextStyle(
-                                            fontSize:
-                                                MediaQuery.of(
-                                                  context,
-                                                ).size.width *
-                                                0.14,
-                                            fontWeight: FontWeight.bold,
-                                            color: const Color.fromRGBO(
-                                              253,
-                                              88,
-                                              88,
-                                              1,
+                                      const SizedBox(height: 20),
+
+                                      // Slide text
+                                      if (_showSlideText)
+                                        SlideTransition(
+                                          position: _textSlideAnimation,
+                                          child: Text(
+                                            'SwiftRide',
+                                            style: TextStyle(
+                                              fontSize:
+                                                  MediaQuery.of(
+                                                    context,
+                                                  ).size.width *
+                                                  0.14,
+                                              fontWeight: FontWeight.bold,
+                                              color: Colors.white,
+                                              shadows: [
+                                                Shadow(
+                                                  blurRadius: 8,
+                                                  color: Colors.black
+                                                      .withOpacity(0.5),
+                                                  offset: const Offset(2, 2),
+                                                ),
+                                              ],
                                             ),
                                           ),
-                                          speed: const Duration(
-                                            milliseconds: 150,
+                                        ),
+
+                                      // Wavy text animation
+                                      if (_showWavyText)
+                                        AnimatedTextKit(
+                                          animatedTexts: [
+                                            WavyAnimatedText(
+                                              'SwiftRide',
+                                              textStyle: TextStyle(
+                                                fontSize:
+                                                    MediaQuery.of(
+                                                      context,
+                                                    ).size.width *
+                                                    0.14,
+                                                fontWeight: FontWeight.bold,
+                                                color: Colors.white,
+                                                shadows: [
+                                                  Shadow(
+                                                    blurRadius: 8,
+                                                    color: Colors.black
+                                                        .withOpacity(0.4),
+                                                    offset: const Offset(2, 2),
+                                                  ),
+                                                ],
+                                              ),
+                                              speed: const Duration(
+                                                milliseconds: 150,
+                                              ),
+                                            ),
+                                          ],
+                                          totalRepeatCount: 1,
+                                          onFinished: () {
+                                            setState(() {
+                                              _showLoader = true;
+                                              _showTagline = true;
+                                            });
+                                            Future.delayed(
+                                              const Duration(seconds: 1),
+                                              () => _checkInternetAndNavigate(),
+                                            );
+                                          },
+                                        ),
+
+                                      const SizedBox(height: 15),
+
+                                      // Tagline
+                                      if (_showTagline)
+                                        AnimatedOpacity(
+                                          opacity: 1.0,
+                                          duration: const Duration(
+                                            milliseconds: 800,
+                                          ),
+                                          child: Text(
+                                            "Ride Smart, Ride Swift",
+                                            style: TextStyle(
+                                              fontSize:
+                                                  MediaQuery.of(
+                                                    context,
+                                                  ).size.width *
+                                                  0.05,
+                                              color: Colors.white70,
+                                              fontWeight: FontWeight.w400,
+                                            ),
                                           ),
                                         ),
-                                      ],
-                                      totalRepeatCount: 1,
-                                      onFinished: () {
-                                        setState(() {
-                                          _showLoader = true;
-                                        });
-                                        Future.delayed(
-                                          const Duration(seconds: 1),
-                                          () {
-                                            _checkInternetAndNavigate();
-                                          },
-                                        );
-                                      },
-                                    ),
 
-                                  // Loader
-                                  if (_showLoader)
-                                    LoadingAnimationWidget.threeRotatingDots(
-                                      color: const Color.fromRGBO(
-                                        253,
-                                        88,
-                                        88,
-                                        1,
-                                      ),
-                                      size:
-                                          MediaQuery.of(context).size.width *
-                                          0.12,
-                                    ),
-                                ],
-                              )
-                              : const SizedBox.shrink(),
+                                      const SizedBox(height: 20),
+
+                                      // Loader
+                                      if (_showLoader)
+                                        LoadingAnimationWidget.threeRotatingDots(
+                                          color: Colors.white,
+                                          size:
+                                              MediaQuery.of(
+                                                context,
+                                              ).size.width *
+                                              0.12,
+                                        ),
+                                    ],
+                                  )
+                                  : const SizedBox.shrink(),
+                        ),
+                      ),
                     ),
-                  ),
+                  ],
                 )
                 : const SizedBox.shrink(),
       ),

@@ -36,11 +36,22 @@ dev_dependencies:
   flutter_lints: ^5.0.0
 
 flutter_native_splash:
-  color: "#7B3DF4" # Same purple background
-  image: assets/van_logo.png # Use your van logo or same main logo
   android: true
   ios: true
   web: true
+
+  # Gradient splash background
+  background_gradient:
+    colors: ["#7B3DF4", "#FD5858"] # Purple → Red (matches your theme)
+
+  # Center logo
+  image: assets/ic_launcher.png
+
+  android_12:
+    # Android 12 doesn’t support gradients → fallback solid color
+    color: "#7B3DF4"
+    image: assets/ic_launcher.png
+    icon_background_color: "#7B3DF4"
 
 flutter:
   uses-material-design: true
@@ -49,14 +60,6 @@ flutter:
     - assets/google_logo.png
     - assets/apple.png
     - assets/van_logo.png
-    # - assets/blob1.png
-    # - assets/blob2.png
-    # - assets/blob3.png
-    # - assets/blob4.png
-    # - assets/blob5.png
-    # - assets/blob6.png
-    # - assets/blob7.png
-    # - assets/blob8.png
     - assets/onboarding_1.png
     - assets/onboarding_4.png
     - assets/onboarding_3.png
