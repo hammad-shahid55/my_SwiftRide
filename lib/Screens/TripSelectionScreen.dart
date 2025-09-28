@@ -223,6 +223,7 @@ class _TripSelectionScreenState extends State<TripSelectionScreen>
                                         (_) => DirectionsMapScreen(
                                           fromAddress: trip['from_city'],
                                           toAddress: trip['to_city'],
+                                          trip: trip,
                                         ),
                                   ),
                                 );

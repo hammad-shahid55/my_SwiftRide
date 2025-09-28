@@ -11,11 +11,13 @@ import 'package:flutter/services.dart';
 class DirectionsMapScreen extends StatefulWidget {
   final String fromAddress;
   final String toAddress;
+  final Map<String, dynamic> trip; // 👈 trip details
 
   const DirectionsMapScreen({
     super.key,
     required this.fromAddress,
     required this.toAddress,
+    required this.trip,
   });
 
   @override
@@ -37,7 +39,6 @@ class _DirectionsMapScreenState extends State<DirectionsMapScreen> {
   );
 
   bool _isDark = false;
-  final String _mapStyle = '';
 
   @override
   void initState() {
@@ -113,28 +114,26 @@ class _DirectionsMapScreenState extends State<DirectionsMapScreen> {
             totalDistance = route.legs.first.distance.text ?? "";
           });
 
-          // Animate camera
-          LatLngBounds bounds;
-          if (fromLatLng!.latitude > toLatLng!.latitude &&
-              fromLatLng!.longitude > toLatLng!.longitude) {
-            bounds = LatLngBounds(southwest: toLatLng!, northeast: fromLatLng!);
-          } else if (fromLatLng!.longitude > toLatLng!.longitude) {
-            bounds = LatLngBounds(
-              southwest: LatLng(fromLatLng!.latitude, toLatLng!.longitude),
-              northeast: LatLng(toLatLng!.latitude, fromLatLng!.longitude),
-            );
-          } else if (fromLatLng!.latitude > toLatLng!.latitude) {
-            bounds = LatLngBounds(
-              southwest: LatLng(toLatLng!.latitude, fromLatLng!.longitude),
-              northeast: LatLng(fromLatLng!.latitude, toLatLng!.longitude),
-            );
-          } else {
-            bounds = LatLngBounds(southwest: fromLatLng!, northeast: toLatLng!);
-          }
+          LatLngBounds bounds = LatLngBounds(
+            southwest: LatLng(
+              fromLatLng!.latitude < toLatLng!.latitude
+                  ? fromLatLng!.latitude
+                  : toLatLng!.latitude,
+              fromLatLng!.longitude < toLatLng!.longitude
+                  ? fromLatLng!.longitude
+                  : toLatLng!.longitude,
+            ),
+            northeast: LatLng(
+              fromLatLng!.latitude > toLatLng!.latitude
+                  ? fromLatLng!.latitude
+                  : toLatLng!.latitude,
+              fromLatLng!.longitude > toLatLng!.longitude
+                  ? fromLatLng!.longitude
+                  : toLatLng!.longitude,
+            ),
+          );
 
           mapController.animateCamera(CameraUpdate.newLatLngBounds(bounds, 80));
-        } else {
-          debugPrint('Directions API error: ${response.errorMessage}');
         }
       }
     } catch (e) {
@@ -142,20 +141,14 @@ class _DirectionsMapScreenState extends State<DirectionsMapScreen> {
     }
   }
 
-  Future<void> _toggleMapStyle() async {
-    _isDark = !_isDark;
-    final style = await DefaultAssetBundle.of(context).loadString(
-      _isDark ? 'assets/map_style_dark.json' : 'assets/map_style_light.json',
-    );
-    mapController.setMapStyle(style);
-  }
-
   @override
   Widget build(BuildContext context) {
+    final trip = widget.trip;
+
     return Scaffold(
       appBar: AppBar(
         title: const Text(
-          'Booking',
+          'Booking Details',
           style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
         ),
         backgroundColor: Colors.deepPurple,
@@ -163,90 +156,128 @@ class _DirectionsMapScreenState extends State<DirectionsMapScreen> {
       body:
           (fromLatLng == null || toLatLng == null)
               ? const Center(child: CircularProgressIndicator())
-              : Stack(
-                children: [
-                  GoogleMap(
-                    initialCameraPosition: CameraPosition(
-                      target: fromLatLng!,
-                      zoom: 12,
-                    ),
-                    polylines: _polylines,
-                    markers: {
-                      Marker(
-                        markerId: const MarkerId('from'),
-                        position: fromLatLng!,
-                        icon:
-                            pickupIcon ??
-                            BitmapDescriptor.defaultMarkerWithHue(
-                              BitmapDescriptor.hueBlue,
-                            ),
-                        infoWindow: const InfoWindow(title: 'Pickup'),
-                      ),
-                      Marker(
-                        markerId: const MarkerId('to'),
-                        position: toLatLng!,
-                        icon:
-                            dropoffIcon ??
-                            BitmapDescriptor.defaultMarkerWithHue(
-                              BitmapDescriptor.hueRed,
-                            ),
-                        infoWindow: const InfoWindow(title: 'Drop-off'),
-                      ),
-                    },
-                    onMapCreated: (controller) async {
-                      mapController = controller;
-                      final style = await DefaultAssetBundle.of(
-                        context,
-                      ).loadString(
-                        _isDark
-                            ? 'assets/map_style_dark.json'
-                            : 'assets/map_style_light.json',
-                      );
-                      mapController.setMapStyle(style);
-                    },
-                  ),
-                  Positioned(
-                    top: 16,
-                    right: 16,
-                    child: FloatingActionButton(
-                      backgroundColor: Colors.white,
-                      onPressed: _toggleMapStyle,
-                      child: const Icon(
-                        Icons.brightness_6,
-                        color: Colors.black,
+              : Padding(
+                padding: const EdgeInsets.all(8.0), // 👈 padding map ke around
+                child: Stack(
+                  children: [
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(16), // 👈 rounded map
+                      child: GoogleMap(
+                        initialCameraPosition: CameraPosition(
+                          target: fromLatLng!,
+                          zoom: 12,
+                        ),
+                        polylines: _polylines,
+                        markers: {
+                          Marker(
+                            markerId: const MarkerId('from'),
+                            position: fromLatLng!,
+                            icon:
+                                pickupIcon ??
+                                BitmapDescriptor.defaultMarkerWithHue(
+                                  BitmapDescriptor.hueBlue,
+                                ),
+                            infoWindow: const InfoWindow(title: 'Pickup'),
+                          ),
+                          Marker(
+                            markerId: const MarkerId('to'),
+                            position: toLatLng!,
+                            icon:
+                                dropoffIcon ??
+                                BitmapDescriptor.defaultMarkerWithHue(
+                                  BitmapDescriptor.hueRed,
+                                ),
+                            infoWindow: const InfoWindow(title: 'Drop-off'),
+                          ),
+                        },
+                        onMapCreated: (controller) {
+                          mapController = controller;
+                        },
                       ),
                     ),
-                  ),
-                  Positioned(
-                    bottom: 20,
-                    left: 16,
-                    right: 16,
-                    child:
-                        totalDistance.isNotEmpty
-                            ? Container(
-                              padding: const EdgeInsets.all(10),
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(12),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black12,
-                                    blurRadius: 5,
-                                  ),
-                                ],
+                    // Booking details card
+                    Positioned(
+                      bottom: 0,
+                      left: 0,
+                      right: 0,
+                      child: Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: const BorderRadius.vertical(
+                            top: Radius.circular(20),
+                          ),
+                          boxShadow: [
+                            BoxShadow(color: Colors.black26, blurRadius: 6),
+                          ],
+                        ),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              "${trip['from_city']} → ${trip['to_city']}",
+                              style: const TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.deepPurple,
                               ),
-                              child: Text(
-                                'Distance: $totalDistance',
-                                textAlign: TextAlign.center,
-                                style: const TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
+                            ),
+                            const SizedBox(height: 6),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  "Price: ${trip['price']} PKR",
+                                  style: const TextStyle(
+                                    fontSize: 16,
+                                    color: Colors.green,
+                                  ),
+                                ),
+                                Text(
+                                  "Seats: ${trip['total_seats']}",
+                                  style: const TextStyle(fontSize: 16),
+                                ),
+                              ],
+                            ),
+                            if (totalDistance.isNotEmpty) ...[
+                              const SizedBox(height: 6),
+                              Text(
+                                "Route Distance: $totalDistance",
+                                style: const TextStyle(color: Colors.grey),
+                              ),
+                            ],
+                            const SizedBox(height: 12),
+                            ElevatedButton(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.deepPurple,
+                                minimumSize: const Size(double.infinity, 48),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
                                 ),
                               ),
-                            )
-                            : const SizedBox.shrink(),
-                  ),
-                ],
+                              onPressed: () {
+                                // 👇 Booking logic yahan dalna hai
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text("Booking Confirmed!"),
+                                  ),
+                                );
+                              },
+                              child: const Text(
+                                "Book Now",
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 16,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
     );
   }
