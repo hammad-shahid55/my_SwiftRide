@@ -4,7 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:swift_ride/Screens/EnableLocationScreen.dart';
 import 'package:swift_ride/Screens/OnBoardingScreen.dart';
-
+import 'package:swift_ride/Screens/HomeScreen.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:animated_text_kit/animated_text_kit.dart';
 import 'package:loading_animation_widget/loading_animation_widget.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
@@ -35,7 +36,7 @@ class _SplashScreenState extends State<SplashScreen>
     super.initState();
 
     _vanController = AnimationController(
-      duration: const Duration(seconds: 1),
+      duration: const Duration(milliseconds: 1300),
       vsync: this,
     );
     _vanAnimation = Tween<Offset>(
@@ -54,7 +55,7 @@ class _SplashScreenState extends State<SplashScreen>
       CurvedAnimation(parent: _textSlideController, curve: Curves.easeOut),
     );
 
-    // Delay before animations start (only background shows first)
+    // Start animations after 2 sec
     Future.delayed(const Duration(seconds: 2), () {
       setState(() {
         _startAnimations = true;
@@ -74,43 +75,64 @@ class _SplashScreenState extends State<SplashScreen>
     });
   }
 
-  /// Internet check + navigation
+  /// Check internet + location + first time + navigate
   Future<void> _checkInternetAndNavigate() async {
     final connectivityResult = await Connectivity().checkConnectivity();
     final hasInternet = connectivityResult != ConnectivityResult.none;
 
-    if (hasInternet) {
-      try {
-        final result = await InternetAddress.lookup('example.com');
-        if (result.isNotEmpty && result[0].rawAddress.isNotEmpty) {
-          final prefs = await SharedPreferences.getInstance();
-          final isFirstTime = prefs.getBool('isFirstTime') ?? true;
+    if (!hasInternet) {
+      _showNetworkError();
+      return;
+    }
 
-          if (isFirstTime) {
-            await prefs.setBool('isFirstTime', false);
-            if (mounted) {
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const OnBoardingScreen(),
-                ),
-              );
-            }
-          } else {
-            if (mounted) {
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const EnableLocationScreen(),
-                ),
-              );
-            }
-          }
-        }
-      } on SocketException catch (_) {
+    try {
+      final result = await InternetAddress.lookup('example.com');
+      if (result.isEmpty || result[0].rawAddress.isEmpty) {
         _showNetworkError();
+        return;
       }
-    } else {
+
+      // Check if first time user
+      final prefs = await SharedPreferences.getInstance();
+      final isFirstTime = prefs.getBool('isFirstTime') ?? true;
+
+      if (isFirstTime) {
+        await prefs.setBool('isFirstTime', false);
+        if (mounted) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const OnBoardingScreen()),
+          );
+        }
+        return;
+      }
+
+      // Check device location
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      LocationPermission permission = await Geolocator.checkPermission();
+
+      if (serviceEnabled &&
+          (permission == LocationPermission.always ||
+              permission == LocationPermission.whileInUse)) {
+        // Location is already enabled -> direct to HomeScreen
+        if (mounted) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const HomeScreen()),
+          );
+        }
+      } else {
+        // Location not enabled -> show EnableLocationScreen
+        if (mounted) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const EnableLocationScreen(),
+            ),
+          );
+        }
+      }
+    } on SocketException catch (_) {
       _showNetworkError();
     }
   }
@@ -152,7 +174,6 @@ class _SplashScreenState extends State<SplashScreen>
         child:
             _showSplashContent
                 ? SingleChildScrollView(
-                  // Needed for RefreshIndicator
                   physics: const AlwaysScrollableScrollPhysics(),
                   child: SizedBox(
                     height: MediaQuery.of(context).size.height,
@@ -226,8 +247,6 @@ class _SplashScreenState extends State<SplashScreen>
                                         setState(() {
                                           _showLoader = true;
                                         });
-
-                                        // Wait before checking internet
                                         Future.delayed(
                                           const Duration(seconds: 1),
                                           () {
@@ -252,7 +271,7 @@ class _SplashScreenState extends State<SplashScreen>
                                     ),
                                 ],
                               )
-                              : const SizedBox.shrink(), // only background first 2 sec
+                              : const SizedBox.shrink(),
                     ),
                   ),
                 )
