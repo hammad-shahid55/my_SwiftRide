@@ -1,11 +1,9 @@
 import 'dart:convert';
-
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:http/http.dart' as http;
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:swift_ride/Screens/DirectionsMapScreen.dart';
-
 import 'package:timezone/timezone.dart' as tz;
 import 'package:timezone/data/latest_all.dart' as tzdata;
 
@@ -27,40 +25,33 @@ class _TripSelectionScreenState extends State<TripSelectionScreen>
   bool isLoading = true;
 
   final supabase = Supabase.instance.client;
-
-  // Put your Google Maps API key here
-  final String googleMapsApiKey = 'AIzaSyCMH5gotuF6vrX4z8Ak4JFfDhpyvL43g50';
+  final String googleMapsApiKey = 'YOUR_GOOGLE_MAPS_KEY';
 
   @override
   void initState() {
     super.initState();
-
-    // Initialize timezone database
     tzdata.initializeTimeZones();
-
     final today = tz.TZDateTime.now(tz.getLocation('Asia/Karachi'));
-
-    weekDays = List.generate(
-      7,
-      (index) => DateFormat('EEE').format(today.add(Duration(days: index))),
-    );
-
+    weekDays = List.generate(7, (index) {
+      final date = today.add(Duration(days: index));
+      return index == 0 ? "Today" : DateFormat('EEE').format(date);
+    });
     _tabController = TabController(length: weekDays.length, vsync: this);
-
     fetchTrips();
   }
 
   Future<Map<String, dynamic>?> fetchDistanceDuration(
-      String origin, String destination) async {
+    String origin,
+    String destination,
+  ) async {
     try {
       final url = Uri.parse(
-          'https://maps.googleapis.com/maps/api/distancematrix/json?units=metric&origins=$origin&destinations=$destination&key=$googleMapsApiKey');
+        'https://maps.googleapis.com/maps/api/distancematrix/json?units=metric&origins=$origin&destinations=$destination&key=$googleMapsApiKey',
+      );
 
       final response = await http.get(url);
-
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-
         if (data['rows'] != null &&
             data['rows'].isNotEmpty &&
             data['rows'][0]['elements'] != null &&
@@ -82,16 +73,10 @@ class _TripSelectionScreenState extends State<TripSelectionScreen>
 
   Future<void> fetchTrips() async {
     try {
-      setState(() {
-        isLoading = true;
-      });
-
+      setState(() => isLoading = true);
       final today = tz.TZDateTime.now(tz.getLocation('Asia/Karachi'));
-
       final fromCity = widget.from.trim();
       final toCity = widget.to.trim();
-
-      debugPrint('Fetching trips from: $fromCity to: $toCity and reverse');
 
       final tripsFromTo = await supabase
           .from('trips')
@@ -109,42 +94,33 @@ class _TripSelectionScreenState extends State<TripSelectionScreen>
 
       final response = [...tripsFromTo, ...tripsToFrom];
 
-      debugPrint('Total trips fetched: ${response.length}');
-
       if (response.isNotEmpty) {
         Map<String, List<Map<String, dynamic>>> loadedTrips = {};
-
         for (var i = 0; i < 7; i++) {
           final date = today.add(Duration(days: i));
           final dayName = i == 0 ? "Today" : DateFormat('EEE').format(date);
+          final tripsForDay =
+              response.where((trip) {
+                DateTime departUtc =
+                    DateTime.parse(trip['depart_time']).toUtc();
+                final departDatePKT = tz.TZDateTime.from(
+                  departUtc,
+                  tz.getLocation('Asia/Karachi'),
+                );
+                return departDatePKT.day == date.day &&
+                    departDatePKT.month == date.month &&
+                    departDatePKT.year == date.year;
+              }).toList();
 
-          final tripsForDay = response.where((trip) {
-            DateTime departUtc = DateTime.parse(trip['depart_time']).toUtc();
-            final departDatePKT =
-                tz.TZDateTime.from(departUtc, tz.getLocation('Asia/Karachi'));
-            return departDatePKT.day == date.day &&
-                departDatePKT.month == date.month &&
-                departDatePKT.year == date.year;
-          }).toList();
-
-          // For each trip, fetch distance & duration from Google Maps API
           final futures = tripsForDay.map((trip) async {
-  final origin = trip['from_city'];
-  final destination = trip['to_city'];
+            final origin = trip['from_city'];
+            final destination = trip['to_city'];
+            final distDur = await fetchDistanceDuration(origin, destination);
+            trip['distance_text'] = distDur?['distance'] ?? 'N/A';
+            trip['duration_text'] = distDur?['duration'] ?? 'N/A';
+          });
 
-  final distDur = await fetchDistanceDuration(origin, destination);
-  if (distDur != null) {
-    trip['distance_text'] = distDur['distance'];
-    trip['duration_text'] = distDur['duration'];
-  } else {
-    trip['distance_text'] = 'N/A';
-    trip['duration_text'] = 'N/A';
-  }
-});
-
-await Future.wait(futures);
-
-
+          await Future.wait(futures);
           loadedTrips[dayName] = tripsForDay;
         }
 
@@ -153,7 +129,6 @@ await Future.wait(futures);
           isLoading = false;
         });
       } else {
-        debugPrint('No trips found for given cities.');
         setState(() {
           tripData = {};
           isLoading = false;
@@ -171,168 +146,224 @@ await Future.wait(futures);
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Choose Your Trip"),
+        backgroundColor: Colors.deepPurple,
+        title: const Text(
+          "Choose Your Trip",
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        ),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () => Navigator.pop(context),
+        ),
         bottom: TabBar(
           controller: _tabController,
           isScrollable: true,
+          indicatorColor: Colors.white,
+          labelColor: Colors.white,
+          unselectedLabelColor: Colors.white70,
           tabs: weekDays.map((day) => Tab(text: day)).toList(),
         ),
       ),
-      body: isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : TabBarView(
-              controller: _tabController,
-              children: weekDays.map((day) {
-                String key = day == weekDays[0] ? "Today" : day;
-                final trips = tripData[key] ?? [];
+      body:
+          isLoading
+              ? const Center(
+                child: CircularProgressIndicator(color: Colors.deepPurple),
+              )
+              : TabBarView(
+                controller: _tabController,
+                children:
+                    weekDays.map((day) {
+                      String key = day == weekDays[0] ? "Today" : day;
+                      final trips = tripData[key] ?? [];
+                      final filteredTrips =
+                          key == "Today"
+                              ? trips.where((trip) {
+                                DateTime departUtc =
+                                    DateTime.parse(trip['depart_time']).toUtc();
+                                final departTimePKT = tz.TZDateTime.from(
+                                  departUtc,
+                                  tz.getLocation('Asia/Karachi'),
+                                );
+                                return departTimePKT.isAfter(nowPKT);
+                              }).toList()
+                              : trips;
 
-                final filteredTrips = key == "Today"
-                    ? trips.where((trip) {
-                        DateTime departUtc = DateTime.parse(trip['depart_time']).toUtc();
-                        final departTimePKT = tz.TZDateTime.from(
-                            departUtc, tz.getLocation('Asia/Karachi'));
-                        return departTimePKT.isAfter(nowPKT);
-                      }).toList()
-                    : trips;
+                      if (filteredTrips.isEmpty) {
+                        return const Center(
+                          child: Text(
+                            "No trips available",
+                            style: TextStyle(color: Colors.deepPurple),
+                          ),
+                        );
+                      }
 
-                if (filteredTrips.isEmpty) {
-                  return const Center(child: Text("No trips available"));
-                }
+                      return RefreshIndicator(
+                        color: Colors.deepPurple,
+                        onRefresh: fetchTrips,
+                        child: ListView.builder(
+                          itemCount: filteredTrips.length,
+                          itemBuilder: (context, index) {
+                            final trip = filteredTrips[index];
 
-                return RefreshIndicator(
-                  onRefresh: fetchTrips,
-                  child: ListView.builder(
-                    itemCount: filteredTrips.length,
-                    itemBuilder: (context, index) {
-                      final trip = filteredTrips[index];
+                            DateTime departUtc =
+                                DateTime.parse(trip["depart_time"]).toUtc();
+                            DateTime arriveUtc =
+                                DateTime.parse(trip["arrive_time"]).toUtc();
 
-                      DateTime departUtc =
-                          DateTime.parse(trip["depart_time"]).toUtc();
-                      DateTime arriveUtc =
-                          DateTime.parse(trip["arrive_time"]).toUtc();
+                            final departTimePKT = tz.TZDateTime.from(
+                              departUtc,
+                              tz.getLocation('Asia/Karachi'),
+                            );
+                            final arriveTimePKT = tz.TZDateTime.from(
+                              arriveUtc,
+                              tz.getLocation('Asia/Karachi'),
+                            );
 
-                      final departTimePKT = tz.TZDateTime.from(
-                          departUtc, tz.getLocation('Asia/Karachi'));
-                      final arriveTimePKT = tz.TZDateTime.from(
-                          arriveUtc, tz.getLocation('Asia/Karachi'));
+                            final totalSeats = trip['total_seats'] ?? 12;
 
-                
-                     
-
-                      final totalSeats = trip['total_seats'] ?? 12;
-
-                     return InkWell(
-  onTap: () {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => DirectionsMapScreen(
-          fromAddress: trip['from_city'], // or trip["from"]
-          toAddress: trip['to_city'],     // or trip["to"]
-        ),
-      ),
-    );
-  },
-  child: Card(
-    margin: const EdgeInsets.all(10),
-    shape: RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(12),
-    ),
-    elevation: 3,
-    child: Padding(
-      padding: const EdgeInsets.all(12),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Text(
-                DateFormat('hh:mm a').format(departTimePKT),
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
+                            return InkWell(
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder:
+                                        (_) => DirectionsMapScreen(
+                                          fromAddress: trip['from_city'],
+                                          toAddress: trip['to_city'],
+                                        ),
+                                  ),
+                                );
+                              },
+                              child: Card(
+                                margin: const EdgeInsets.all(10),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                elevation: 3,
+                                child: Padding(
+                                  padding: const EdgeInsets.all(12),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
+                                        children: [
+                                          Text(
+                                            DateFormat(
+                                              'hh:mm a',
+                                            ).format(departTimePKT),
+                                            style: const TextStyle(
+                                              fontSize: 18,
+                                              fontWeight: FontWeight.bold,
+                                              color: Colors.deepPurple,
+                                            ),
+                                          ),
+                                          const Text(
+                                            "  →  ",
+                                            style: TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                              color: Colors.deepPurple,
+                                            ),
+                                          ),
+                                          Text(
+                                            DateFormat(
+                                              'hh:mm a',
+                                            ).format(arriveTimePKT),
+                                            style: const TextStyle(
+                                              fontSize: 18,
+                                              fontWeight: FontWeight.bold,
+                                              color: Colors.grey,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 5),
+                                      Text(
+                                        "${trip["from"]} → ${trip["to"]}",
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.w600,
+                                          color: Colors.deepPurple,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 5),
+                                      Row(
+                                        children: [
+                                          const Icon(
+                                            Icons.directions_bus,
+                                            size: 18,
+                                            color: Colors.deepPurple,
+                                          ),
+                                          const SizedBox(width: 4),
+                                          Text(
+                                            trip["type"] ?? "",
+                                            style: const TextStyle(
+                                              color: Colors.deepPurple,
+                                            ),
+                                          ),
+                                          if (trip["ac"] == true) ...[
+                                            const SizedBox(width: 8),
+                                            const Icon(
+                                              Icons.ac_unit,
+                                              size: 18,
+                                              color: Colors.deepPurple,
+                                            ),
+                                          ],
+                                        ],
+                                      ),
+                                      const Divider(),
+                                      Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          Text(
+                                            'Total Seats: $totalSeats',
+                                            style: TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 14,
+                                              color: Colors.grey[700],
+                                            ),
+                                          ),
+                                          Text(
+                                            "${trip["price"]} PKR",
+                                            style: const TextStyle(
+                                              color: Colors.green,
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 16,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 8),
+                                      Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          Text(
+                                            'Distance: ${trip['distance_text'] ?? 'N/A'}',
+                                            style: const TextStyle(
+                                              fontWeight: FontWeight.w600,
+                                              color: Colors.deepPurple,
+                                            ),
+                                          ),
+                                          Text(
+                                            'Duration: ${trip['duration_text'] ?? 'N/A'}',
+                                            style: const TextStyle(
+                                              fontWeight: FontWeight.w600,
+                                              color: Colors.deepPurple,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      );
+                    }).toList(),
               ),
-              const Text("  →  "),
-              Text(
-                DateFormat('hh:mm a').format(arriveTimePKT),
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.grey,
-                ),
-              ),
-              const SizedBox(width: 70),
-            ],
-          ),
-          const SizedBox(height: 5),
-          Text("${trip["from"]} → ${trip["to"]}"),
-          const SizedBox(height: 5),
-          Row(
-            children: [
-              const Icon(Icons.directions_bus, size: 18),
-              const SizedBox(width: 4),
-              Text(trip["type"] ?? ""),
-              if (trip["ac"] == true) ...[
-                const SizedBox(width: 8),
-                const Icon(Icons.ac_unit, size: 18),
-              ],
-            ],
-          ),
-          const Divider(),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Total Seats: $totalSeats',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 14,
-                  color: Colors.grey[700],
-                ),
-              ),
-              Text(
-                "${trip["price"]} PKR",
-                style: const TextStyle(
-                  color: Colors.green,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Distance: ${trip['distance_text'] ?? 'N/A'}',
-                style: TextStyle(
-                  fontWeight: FontWeight.w600,
-                  color: Colors.black87,
-                ),
-              ),
-              Text(
-                'Duration: ${trip['duration_text'] ?? 'N/A'}',
-                style: TextStyle(
-                  fontWeight: FontWeight.w600,
-                  color: Colors.black87,
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    ),
-  ),
-);
-
-                    },
-                  ),
-                );
-              }).toList(),
-            ),
     );
   }
 }
