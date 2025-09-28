@@ -40,13 +40,15 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     _emailController.text = user.email ?? '';
 
     try {
-      final response = await supabase
-          .from('profiles')
-          .select()
-          .eq('id', user.id)
-          .maybeSingle();
+      final response =
+          await supabase
+              .from('profiles')
+              .select()
+              .eq('id', user.id)
+              .maybeSingle();
 
       if (response == null) {
+        // First time user → Insert empty profile
         await supabase.from('profiles').insert({
           'id': user.id,
           'email': user.email,
@@ -62,11 +64,14 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
         final address = response['address'] ?? '';
         _profileImageUrl = response['profile_pic'];
 
+        // If profile already complete → Go to HomeScreen
         if (name.isNotEmpty && phone.isNotEmpty && address.isNotEmpty) {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (_) => const HomeScreen()),
-          );
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (_) => const HomeScreen()),
+            );
+          });
           return;
         }
 
@@ -78,9 +83,9 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       setState(() {});
     } catch (e) {
       debugPrint('Load profile error: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error loading profile: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error loading profile: $e')));
     }
   }
 
@@ -105,27 +110,28 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       final fileExt = picked.path.split('.').last;
       final filePath = 'avatars/${user.id}.$fileExt';
 
-      await supabase.storage.from('avatars').uploadBinary(
+      await supabase.storage
+          .from('avatars')
+          .uploadBinary(
             filePath,
             fileBytes,
             fileOptions: const FileOptions(upsert: true),
           );
 
-      final publicURL =
-          supabase.storage.from('avatars').getPublicUrl(filePath);
+      final publicURL = supabase.storage.from('avatars').getPublicUrl(filePath);
 
       setState(() {
         _profileImageUrl = publicURL;
       });
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Image uploaded!')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Image uploaded!')));
     } catch (e) {
       debugPrint('Upload error: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Upload failed: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Upload failed: $e')));
     } finally {
       setState(() {
         _uploading = false;
@@ -147,7 +153,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
         'name': _nameController.text.trim(),
         'phone': _phoneController.text.trim(),
         'address': _addressController.text.trim(),
-        'profile_pic': _profileImageUrl,
+        'profile_pic': _profileImageUrl, // image optional
         'updated_at': DateTime.now().toIso8601String(),
       };
 
@@ -162,9 +168,9 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
         }
       } catch (e) {
         debugPrint('Save error: $e');
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error saving: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error saving: $e')));
       }
     }
   }
@@ -175,7 +181,11 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Your Profile'),
+        title: const Text(
+          'Complete Your Profile',
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        ),
+        backgroundColor: Colors.deepPurple,
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
@@ -183,33 +193,50 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
           key: _formKey,
           child: Column(
             children: [
-              Stack(
-                children: [
-                  CircleAvatar(
-                    radius: 50,
-                    backgroundImage: _profileImageUrl != null
-                        ? NetworkImage(_profileImageUrl!)
-                        : null,
-                    child: _profileImageUrl == null
-                        ? const Icon(Icons.person, size: 50)
-                        : null,
-                  ),
-                  Positioned(
-                    bottom: 0,
-                    right: 0,
-                    child: IconButton(
-                      icon: const Icon(Icons.camera_alt),
-                      onPressed: _uploading ? null : _pickAndUploadImage,
+              GestureDetector(
+                onTap: _uploading ? null : _pickAndUploadImage,
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    CircleAvatar(
+                      radius: 60,
+                      backgroundImage:
+                          _profileImageUrl != null
+                              ? NetworkImage(_profileImageUrl!)
+                              : null,
+                      child:
+                          _profileImageUrl == null
+                              ? const Icon(Icons.person, size: 60)
+                              : null,
                     ),
-                  ),
-                ],
+                    Positioned(
+                      bottom: 0,
+                      right: 0,
+                      child: CircleAvatar(
+                        backgroundColor: Colors.white,
+                        radius: 20,
+                        child: IconButton(
+                          icon: const Icon(
+                            Icons.camera_alt,
+                            size: 20,
+                            color: Colors.black,
+                          ),
+                          onPressed: _uploading ? null : _pickAndUploadImage,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
               const SizedBox(height: 20),
+
+              // Name Field
               TextFormField(
                 controller: _nameController,
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   labelText: 'Full Name',
-                  border: OutlineInputBorder(),
+                  border: const OutlineInputBorder(),
+                  suffixIcon: const Icon(Icons.edit),
                 ),
                 validator: (value) {
                   if (value == null || value.isEmpty) {
@@ -223,20 +250,26 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                 },
               ),
               const SizedBox(height: 16),
+
+              // Email Field (Read only)
               TextFormField(
                 controller: _emailController,
+                readOnly: true,
                 decoration: const InputDecoration(
                   labelText: 'Email',
                   border: OutlineInputBorder(),
+                  suffixIcon: Icon(Icons.lock),
                 ),
-                readOnly: true,
               ),
               const SizedBox(height: 16),
+
+              // Phone Field
               TextFormField(
                 controller: _phoneController,
                 decoration: const InputDecoration(
                   labelText: 'Phone Number',
                   border: OutlineInputBorder(),
+                  suffixIcon: Icon(Icons.edit),
                 ),
                 keyboardType: TextInputType.phone,
                 validator: (value) {
@@ -251,17 +284,23 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                 },
               ),
               const SizedBox(height: 16),
+
+              // Address Field
               TextFormField(
                 controller: _addressController,
                 decoration: const InputDecoration(
                   labelText: 'Address',
                   border: OutlineInputBorder(),
+                  suffixIcon: Icon(Icons.edit),
                 ),
                 maxLines: 2,
-                validator: (value) =>
-                    value == null || value.isEmpty ? 'Enter address' : null,
+                validator:
+                    (value) =>
+                        value == null || value.isEmpty ? 'Enter address' : null,
               ),
               const SizedBox(height: 24),
+
+              // Save Button
               SizedBox(
                 width: double.infinity,
                 height: size.height * 0.065,
@@ -270,12 +309,13 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF7B3DF4),
                   ),
-                  child: _uploading
-                      ? const CircularProgressIndicator(color: Colors.white)
-                      : const Text(
-                          'Save Profile',
-                          style: TextStyle(color: Colors.white),
-                        ),
+                  child:
+                      _uploading
+                          ? const CircularProgressIndicator(color: Colors.white)
+                          : const Text(
+                            'Save Profile',
+                            style: TextStyle(color: Colors.white),
+                          ),
                 ),
               ),
             ],
