@@ -64,7 +64,7 @@ class _OnBoardingScreenState extends State<OnBoardingScreen> {
                 style: TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
-                  color: Colors.deepPurple,
+                  color: Color.fromRGBO(123, 61, 244, 1),
                 ),
               ),
             )
@@ -75,14 +75,10 @@ class _OnBoardingScreenState extends State<OnBoardingScreen> {
                 color: Color.fromRGBO(123, 61, 244, 1),
               ),
               onPressed: () {
-                if (_currentPage < _onboardingData.length - 1) {
-                  _controller.nextPage(
-                    duration: const Duration(milliseconds: 200),
-                    curve: Curves.ease,
-                  );
-                } else {
-                  _goToHome();
-                }
+                _controller.nextPage(
+                  duration: const Duration(milliseconds: 300),
+                  curve: Curves.ease,
+                );
               },
             ),
       ],
