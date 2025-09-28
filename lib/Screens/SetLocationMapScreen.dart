@@ -3,6 +3,7 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_place/google_place.dart';
+import 'package:swift_ride/Widgets/theme.dart';
 
 class SetLocationMapScreen extends StatefulWidget {
   const SetLocationMapScreen({super.key});
@@ -153,7 +154,10 @@ class _SetLocationMapScreenState extends State<SetLocationMapScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: Colors.deepPurple,
+        backgroundColor: Colors.transparent,
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(gradient: AppTheme.mainGradient),
+        ),
         iconTheme: const IconThemeData(
           color: Colors.white,
         ), // back button white

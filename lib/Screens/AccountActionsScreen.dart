@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:swift_ride/Screens/WelcomeScreen.dart';
+import 'package:swift_ride/Widgets/theme.dart';
 
 class AccountActionsScreen extends StatelessWidget {
   const AccountActionsScreen({super.key});
@@ -22,7 +23,7 @@ class AccountActionsScreen extends StatelessWidget {
     try {
       await supabase.auth.resetPasswordForEmail(
         user.email!,
-        redirectTo: "swiftride://reset-password", // 👈 your deep link URL
+        redirectTo: "swiftride://reset-password",
       );
 
       if (context.mounted) {
@@ -134,7 +135,10 @@ class AccountActionsScreen extends StatelessWidget {
           "Account Actions",
           style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
         ),
-        backgroundColor: Colors.deepPurple,
+        backgroundColor: Colors.transparent,
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(gradient: AppTheme.mainGradient),
+        ),
         iconTheme: const IconThemeData(color: Colors.white),
       ),
       body: Padding(

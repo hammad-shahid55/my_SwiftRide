@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_stripe/flutter_stripe.dart';
 import 'package:http/http.dart' as http;
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:swift_ride/Widgets/theme.dart';
 
 class WalletScreen extends StatefulWidget {
   const WalletScreen({super.key});
@@ -137,7 +138,10 @@ class _WalletScreenState extends State<WalletScreen> {
           'Wallet',
           style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
         ),
-        backgroundColor: Colors.deepPurple,
+        backgroundColor: Colors.transparent,
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(gradient: AppTheme.mainGradient),
+        ),
         elevation: 0,
         iconTheme: const IconThemeData(
           color: Colors.white, // Arrow color

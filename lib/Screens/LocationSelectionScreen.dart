@@ -5,6 +5,7 @@ import 'package:geocoding/geocoding.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:swift_ride/Screens/SetLocationMapScreen.dart';
 import 'package:swift_ride/Screens/TripSelectionScreen.dart';
+import 'package:swift_ride/Widgets/theme.dart';
 
 class LocationSelectionScreen extends StatefulWidget {
   final String? initialValue;
@@ -265,7 +266,10 @@ class _LocationSelectionScreenState extends State<LocationSelectionScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: Colors.deepPurple,
+        backgroundColor: Colors.transparent,
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(gradient: AppTheme.mainGradient),
+        ),
         title: const Text(
           'Where are you going?',
           style: TextStyle(
@@ -411,53 +415,77 @@ class _LocationSelectionScreenState extends State<LocationSelectionScreen> {
             ),
 
             const SizedBox(height: 16),
-            ElevatedButton.icon(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.deepPurple,
-                foregroundColor: Colors.white,
-              ),
-              icon: const Icon(Icons.search),
-              label: const Text("Search Trip"),
-              onPressed: () {
-                if (fromController.text.isNotEmpty &&
-                    toController.text.isNotEmpty) {
-                  String getCityFromAddress(String address) {
-                    final lower = address.toLowerCase();
-                    if (lower.contains('islamabad')) return 'Islamabad';
-                    if (lower.contains('rawalpindi')) return 'Rawalpindi';
-                    return '';
-                  }
 
-                  final fromCity = getCityFromAddress(fromController.text);
-                  final toCity = getCityFromAddress(toController.text);
+            // Gradient Button
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 100),
+              child: Container(
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  gradient: AppTheme.mainGradient,
+                  borderRadius: BorderRadius.circular(50),
+                ),
+                child: ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.transparent,
+                    shadowColor: Colors.transparent,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  icon: const Icon(Icons.search),
+                  label: const Text(
+                    "Search Trip",
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
+                  onPressed: () {
+                    if (fromController.text.isNotEmpty &&
+                        toController.text.isNotEmpty) {
+                      String getCityFromAddress(String address) {
+                        final lower = address.toLowerCase();
+                        if (lower.contains('islamabad')) return 'Islamabad';
+                        if (lower.contains('rawalpindi')) return 'Rawalpindi';
+                        return '';
+                      }
 
-                  if (fromCity.isEmpty || toCity.isEmpty) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text(
-                          'Please enter valid locations including Islamabad or Rawalpindi',
+                      final fromCity = getCityFromAddress(fromController.text);
+                      final toCity = getCityFromAddress(toController.text);
+
+                      if (fromCity.isEmpty || toCity.isEmpty) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text(
+                              'Please enter valid locations including Islamabad or Rawalpindi',
+                            ),
+                          ),
+                        );
+                        return;
+                      }
+
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder:
+                              (_) => TripSelectionScreen(
+                                from: fromCity,
+                                to: toCity,
+                              ),
                         ),
-                      ),
-                    );
-                    return;
-                  }
-
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder:
-                          (_) =>
-                              TripSelectionScreen(from: fromCity, to: toCity),
-                    ),
-                  );
-                } else {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Please enter both From and To addresses'),
-                    ),
-                  );
-                }
-              },
+                      );
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text(
+                            'Please enter both From and To addresses',
+                          ),
+                        ),
+                      );
+                    }
+                  },
+                ),
+              ),
             ),
 
             const SizedBox(height: 24),

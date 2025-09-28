@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:swift_ride/Widgets/theme.dart';
 
 class ContactUsScreen extends StatefulWidget {
   const ContactUsScreen({super.key});
@@ -119,7 +120,10 @@ class _ContactUsScreenState extends State<ContactUsScreen>
     return Scaffold(
       backgroundColor: Colors.deepPurple[50],
       appBar: AppBar(
-        backgroundColor: Colors.deepPurple,
+        backgroundColor: Colors.transparent,
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(gradient: AppTheme.mainGradient),
+        ),
         title: const Text(
           "Contact Us",
           style: TextStyle(

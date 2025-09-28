@@ -160,18 +160,35 @@ class _BookingWidgetState extends State<BookingWidget> {
             ],
           ),
           const SizedBox(height: 12),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.deepPurple,
-              minimumSize: const Size(double.infinity, 48),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
+          // Gradient Book Now button
+          Container(
+            height: 48,
+            width: double.infinity,
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [Color(0xFF5500FF), Color(0xFFFB7B7B)],
+                begin: Alignment.centerLeft,
+                end: Alignment.centerRight,
               ),
+              borderRadius: BorderRadius.circular(12),
             ),
-            onPressed: _bookSeats,
-            child: const Text(
-              "Book Now",
-              style: TextStyle(color: Colors.white, fontSize: 16),
+            child: TextButton(
+              onPressed: _bookSeats,
+              style: TextButton.styleFrom(
+                padding: const EdgeInsets.all(0),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                foregroundColor: Colors.white,
+              ),
+              child: const Text(
+                "Book Now",
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
             ),
           ),
         ],

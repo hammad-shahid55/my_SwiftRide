@@ -30,25 +30,28 @@ class AppDrawer extends StatelessWidget {
         child: Container(
           decoration: const BoxDecoration(
             gradient: LinearGradient(
-              colors: [Colors.deepPurple, Color.fromARGB(255, 156, 123, 214)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
+              colors: [Color(0xFF7B3DF4), Color(0xFFFD5858)], // Purple → Red
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
             ),
           ),
           child: Column(
             children: [
-              // Custom centered header
+              // Custom header
               Container(
                 padding: const EdgeInsets.all(20),
                 width: double.infinity,
                 decoration: const BoxDecoration(
-                  color: Color.fromARGB(255, 106, 63, 207),
+                  gradient: LinearGradient(
+                    colors: [Color(0xFF7B3DF4), Color(0xFFFD5858)],
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                  ),
                 ),
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     const SizedBox(height: 10),
-                    // CircleAvatar wrapped with GestureDetector
                     GestureDetector(
                       onTap: () => onNavigate(const SettingsScreen()),
                       child: const CircleAvatar(
@@ -82,11 +85,10 @@ class AppDrawer extends StatelessWidget {
                 ),
               ),
 
-              // Divider below header
               const Divider(color: Colors.white70, thickness: 1, height: 0),
-
               const SizedBox(height: 10),
 
+              // Drawer Items
               Expanded(
                 child: ListView(
                   padding: EdgeInsets.zero,

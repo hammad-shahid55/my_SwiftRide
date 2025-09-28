@@ -8,6 +8,7 @@ import 'package:flutter_polyline_points/flutter_polyline_points.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:flutter/services.dart';
 import 'package:swift_ride/Widgets/BookingWidget.dart';
+import 'package:swift_ride/Widgets/theme.dart';
 
 class DirectionsMapScreen extends StatefulWidget {
   final String fromAddress;
@@ -154,7 +155,10 @@ class _DirectionsMapScreenState extends State<DirectionsMapScreen> {
           'Booking Details',
           style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
         ),
-        backgroundColor: Colors.deepPurple,
+        backgroundColor: Colors.transparent,
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(gradient: AppTheme.mainGradient),
+        ),
       ),
       body:
           (fromLatLng == null || toLatLng == null)

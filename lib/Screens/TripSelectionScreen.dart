@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:http/http.dart' as http;
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:swift_ride/Screens/DirectionsMapScreen.dart';
+import 'package:swift_ride/Widgets/theme.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'package:timezone/data/latest_all.dart' as tzdata;
 
@@ -139,7 +140,10 @@ class _TripSelectionScreenState extends State<TripSelectionScreen>
 
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: Colors.deepPurple,
+        backgroundColor: Colors.transparent,
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(gradient: AppTheme.mainGradient),
+        ),
         title: const Text(
           "Choose Your Trip",
           style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),

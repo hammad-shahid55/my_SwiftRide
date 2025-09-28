@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:swift_ride/Widgets/theme.dart';
 
 class PrivacyPolicyScreen extends StatelessWidget {
   const PrivacyPolicyScreen({super.key});
@@ -69,7 +70,10 @@ class PrivacyPolicyScreen extends StatelessWidget {
           "Privacy Policy",
           style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
         ),
-        backgroundColor: Colors.deepPurple,
+        backgroundColor: Colors.transparent,
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(gradient: AppTheme.mainGradient),
+        ),
         iconTheme: const IconThemeData(color: Colors.white),
       ),
       body: Padding(
