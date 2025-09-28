@@ -18,6 +18,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   String userName = '...';
   List<Map<String, dynamic>> recentLocations = [];
+  List<Map<String, dynamic>> completedRides = [];
   bool showAllHistory = false;
 
   DateTime? lastBackPressTime;
@@ -27,6 +28,7 @@ class _HomeScreenState extends State<HomeScreen> {
     super.initState();
     fetchUserName();
     fetchRecentLocations();
+    fetchCompletedRides();
   }
 
   Future<void> fetchUserName() async {
@@ -68,6 +70,26 @@ class _HomeScreenState extends State<HomeScreen> {
 
     setState(() {
       recentLocations =
+          (response as List)
+              .map((item) => item as Map<String, dynamic>)
+              .toList();
+    });
+  }
+
+  Future<void> fetchCompletedRides() async {
+    final user = supabase.auth.currentUser;
+    if (user == null) return;
+
+    final response = await supabase
+        .from('bookings')
+        .select('from_city, to_city, seats, total_price, status, created_at')
+        .eq('user_id', user.id)
+        .eq('status', 'completed')
+        .order('created_at', ascending: false)
+        .limit(10);
+
+    setState(() {
+      completedRides =
           (response as List)
               .map((item) => item as Map<String, dynamic>)
               .toList();
@@ -210,6 +232,7 @@ class _HomeScreenState extends State<HomeScreen> {
           onRefresh: () async {
             await fetchUserName();
             await fetchRecentLocations();
+            await fetchCompletedRides();
           },
           child: SingleChildScrollView(
             physics: const AlwaysScrollableScrollPhysics(),
@@ -282,10 +305,49 @@ class _HomeScreenState extends State<HomeScreen> {
                   ],
                 ),
                 const SizedBox(height: 8),
-                const SizedBox(
-                  height: 300,
-                  child: Center(child: Text('No lines available')),
-                ),
+
+                // ✅ Completed Rides Section
+                if (completedRides.isNotEmpty)
+                  Column(
+                    children:
+                        completedRides.map((ride) {
+                          return Card(
+                            margin: const EdgeInsets.symmetric(vertical: 6),
+                            child: ListTile(
+                              leading: const Icon(
+                                Icons.directions_bus,
+                                color: Colors.deepPurple,
+                              ),
+                              title: Text(
+                                "${ride['from_city']} → ${ride['to_city']}",
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.deepPurple,
+                                ),
+                              ),
+                              subtitle: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text("Seats: ${ride['seats']}"),
+                                  Text("Total: ${ride['total_price']} PKR"),
+                                  Text(
+                                    "Status: ${ride['status']}",
+                                    style: const TextStyle(
+                                      color: Colors.blue,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        }).toList(),
+                  )
+                else
+                  const SizedBox(
+                    height: 100,
+                    child: Center(child: Text("No completed rides available")),
+                  ),
               ],
             ),
           ),

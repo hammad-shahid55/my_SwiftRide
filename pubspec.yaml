@@ -36,8 +36,8 @@ dev_dependencies:
   flutter_lints: ^5.0.0
 
 flutter_native_splash:
-  color: "#7B3DF4" # Same purple background
-  image: assets/van_logo.png # Use your van logo or same main logo
+  color: "#FD5858"
+  image: assets/ic_launcher.png
   android: true
   ios: true
   web: true

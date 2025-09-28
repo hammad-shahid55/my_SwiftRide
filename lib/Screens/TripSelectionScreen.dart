@@ -99,6 +99,7 @@ class _TripSelectionScreenState extends State<TripSelectionScreen>
         for (var i = 0; i < 7; i++) {
           final date = today.add(Duration(days: i));
           final dayName = i == 0 ? "Today" : DateFormat('EEE').format(date);
+
           final tripsForDay =
               response.where((trip) {
                 DateTime departUtc =
@@ -112,15 +113,7 @@ class _TripSelectionScreenState extends State<TripSelectionScreen>
                     departDatePKT.year == date.year;
               }).toList();
 
-          final futures = tripsForDay.map((trip) async {
-            final origin = trip['from_city'];
-            final destination = trip['to_city'];
-            final distDur = await fetchDistanceDuration(origin, destination);
-            trip['distance_text'] = distDur?['distance'] ?? 'N/A';
-            trip['duration_text'] = distDur?['duration'] ?? 'N/A';
-          });
-
-          await Future.wait(futures);
+          // No API call needed, values already in trip
           loadedTrips[dayName] = tripsForDay;
         }
 
@@ -230,6 +223,7 @@ class _TripSelectionScreenState extends State<TripSelectionScreen>
                                         (_) => DirectionsMapScreen(
                                           fromAddress: trip['from_city'],
                                           toAddress: trip['to_city'],
+                                          trip: trip,
                                         ),
                                   ),
                                 );

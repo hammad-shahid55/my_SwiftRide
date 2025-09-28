@@ -7,15 +7,18 @@ import 'package:google_maps_webservice/directions.dart' as gmw;
 import 'package:flutter_polyline_points/flutter_polyline_points.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:flutter/services.dart';
+import 'package:swift_ride/Widgets/BookingWidget.dart';
 
 class DirectionsMapScreen extends StatefulWidget {
   final String fromAddress;
   final String toAddress;
+  final Map<String, dynamic> trip;
 
   const DirectionsMapScreen({
     super.key,
     required this.fromAddress,
     required this.toAddress,
+    required this.trip,
   });
 
   @override
@@ -35,9 +38,6 @@ class _DirectionsMapScreenState extends State<DirectionsMapScreen> {
   final directions = gmw.GoogleMapsDirections(
     apiKey: 'AIzaSyCMH5gotuF6vrX4z8Ak4JFfDhpyvL43g50',
   );
-
-  bool _isDark = false;
-  final String _mapStyle = '';
 
   @override
   void initState() {
@@ -113,28 +113,26 @@ class _DirectionsMapScreenState extends State<DirectionsMapScreen> {
             totalDistance = route.legs.first.distance.text ?? "";
           });
 
-          // Animate camera
-          LatLngBounds bounds;
-          if (fromLatLng!.latitude > toLatLng!.latitude &&
-              fromLatLng!.longitude > toLatLng!.longitude) {
-            bounds = LatLngBounds(southwest: toLatLng!, northeast: fromLatLng!);
-          } else if (fromLatLng!.longitude > toLatLng!.longitude) {
-            bounds = LatLngBounds(
-              southwest: LatLng(fromLatLng!.latitude, toLatLng!.longitude),
-              northeast: LatLng(toLatLng!.latitude, fromLatLng!.longitude),
-            );
-          } else if (fromLatLng!.latitude > toLatLng!.latitude) {
-            bounds = LatLngBounds(
-              southwest: LatLng(toLatLng!.latitude, fromLatLng!.longitude),
-              northeast: LatLng(fromLatLng!.latitude, toLatLng!.longitude),
-            );
-          } else {
-            bounds = LatLngBounds(southwest: fromLatLng!, northeast: toLatLng!);
-          }
+          LatLngBounds bounds = LatLngBounds(
+            southwest: LatLng(
+              fromLatLng!.latitude < toLatLng!.latitude
+                  ? fromLatLng!.latitude
+                  : toLatLng!.latitude,
+              fromLatLng!.longitude < toLatLng!.longitude
+                  ? fromLatLng!.longitude
+                  : toLatLng!.longitude,
+            ),
+            northeast: LatLng(
+              fromLatLng!.latitude > toLatLng!.latitude
+                  ? fromLatLng!.latitude
+                  : toLatLng!.latitude,
+              fromLatLng!.longitude > toLatLng!.longitude
+                  ? fromLatLng!.longitude
+                  : toLatLng!.longitude,
+            ),
+          );
 
           mapController.animateCamera(CameraUpdate.newLatLngBounds(bounds, 80));
-        } else {
-          debugPrint('Directions API error: ${response.errorMessage}');
         }
       }
     } catch (e) {
@@ -142,104 +140,99 @@ class _DirectionsMapScreenState extends State<DirectionsMapScreen> {
     }
   }
 
-  Future<void> _toggleMapStyle() async {
-    _isDark = !_isDark;
-    final style = await DefaultAssetBundle.of(context).loadString(
-      _isDark ? 'assets/map_style_dark.json' : 'assets/map_style_light.json',
-    );
-    mapController.setMapStyle(style);
-  }
-
   @override
   Widget build(BuildContext context) {
+    final trip = widget.trip;
+
     return Scaffold(
-      appBar: AppBar(title: const Text('Route Preview')),
+      appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: const Text(
+          'Booking Details',
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        ),
+        backgroundColor: Colors.deepPurple,
+      ),
       body:
           (fromLatLng == null || toLatLng == null)
               ? const Center(child: CircularProgressIndicator())
               : Stack(
                 children: [
-                  GoogleMap(
-                    initialCameraPosition: CameraPosition(
-                      target: fromLatLng!,
-                      zoom: 12,
-                    ),
-                    polylines: _polylines,
-                    markers: {
-                      Marker(
-                        markerId: const MarkerId('from'),
-                        position: fromLatLng!,
-                        icon:
-                            pickupIcon ??
-                            BitmapDescriptor.defaultMarkerWithHue(
-                              BitmapDescriptor.hueBlue,
-                            ),
-                        infoWindow: const InfoWindow(title: 'Pickup'),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(16),
+                    child: GoogleMap(
+                      initialCameraPosition: CameraPosition(
+                        target: fromLatLng!,
+                        zoom: 12,
                       ),
-                      Marker(
-                        markerId: const MarkerId('to'),
-                        position: toLatLng!,
-                        icon:
-                            dropoffIcon ??
-                            BitmapDescriptor.defaultMarkerWithHue(
-                              BitmapDescriptor.hueRed,
-                            ),
-                        infoWindow: const InfoWindow(title: 'Drop-off'),
-                      ),
-                    },
-                    onMapCreated: (controller) async {
-                      mapController = controller;
-                      final style = await DefaultAssetBundle.of(
-                        context,
-                      ).loadString(
-                        _isDark
-                            ? 'assets/map_style_dark.json'
-                            : 'assets/map_style_light.json',
-                      );
-                      mapController.setMapStyle(style);
-                    },
-                  ),
-                  Positioned(
-                    top: 16,
-                    right: 16,
-                    child: FloatingActionButton(
-                      backgroundColor: Colors.white,
-                      onPressed: _toggleMapStyle,
-                      child: const Icon(
-                        Icons.brightness_6,
-                        color: Colors.black,
-                      ),
+                      polylines: _polylines,
+                      markers: {
+                        Marker(
+                          markerId: const MarkerId('from'),
+                          position: fromLatLng!,
+                          icon:
+                              pickupIcon ??
+                              BitmapDescriptor.defaultMarkerWithHue(
+                                BitmapDescriptor.hueBlue,
+                              ),
+                          infoWindow: const InfoWindow(title: 'Pickup'),
+                        ),
+                        Marker(
+                          markerId: const MarkerId('to'),
+                          position: toLatLng!,
+                          icon:
+                              dropoffIcon ??
+                              BitmapDescriptor.defaultMarkerWithHue(
+                                BitmapDescriptor.hueRed,
+                              ),
+                          infoWindow: const InfoWindow(title: 'Drop-off'),
+                        ),
+                      },
+                      onMapCreated: (controller) {
+                        mapController = controller;
+                      },
                     ),
                   ),
                   Positioned(
-                    bottom: 20,
-                    left: 16,
-                    right: 16,
-                    child:
-                        totalDistance.isNotEmpty
-                            ? Container(
-                              padding: const EdgeInsets.all(10),
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(12),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black12,
-                                    blurRadius: 5,
-                                  ),
-                                ],
-                              ),
-                              child: Text(
-                                'Distance: $totalDistance',
-                                textAlign: TextAlign.center,
-                                style: const TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            )
-                            : const SizedBox.shrink(),
+                    bottom: 0,
+                    left: 0,
+                    right: 0,
+                    child: SingleChildScrollView(
+                      child: BookingWidget(
+                        totalSeats: trip['total_seats'] ?? 1,
+                        pricePerSeat: trip['price'] ?? 0,
+                        fromCity: trip['from_city'],
+                        toCity: trip['to_city'],
+                        trip: trip,
+                        onBookingCompleted: () {
+                          // Refresh trips after booking
+                          setState(() {});
+                        },
+                      ),
+                    ),
                   ),
+                  if (totalDistance.isNotEmpty)
+                    Positioned(
+                      top: 10,
+                      left: 16,
+                      child: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.white70,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          "Route Distance: $totalDistance",
+                          style: const TextStyle(
+                            fontSize: 14,
+                            color: Colors.black87,
+                          ),
+                        ),
+                      ),
+                    ),
                 ],
               ),
     );
