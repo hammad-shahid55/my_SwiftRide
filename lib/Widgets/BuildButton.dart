@@ -17,30 +17,40 @@ class BuildButton extends StatelessWidget {
     return SizedBox(
       width: double.infinity,
       height: 50,
-      child: OutlinedButton.icon(
-        style: OutlinedButton.styleFrom(
-          backgroundColor: Colors.white,
-          foregroundColor: Colors.black,
-          side: const BorderSide(
-            color: Color.fromRGBO(226, 223, 223, 1),
-            width: 1,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [
+              Color(0xFF5500FF), // left color
+              Color(0xFFFB7B7B), // right color
+            ],
+            begin: Alignment.centerLeft,
+            end: Alignment.centerRight,
           ),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-          padding: const EdgeInsets.symmetric(vertical: 12),
+          borderRadius: BorderRadius.circular(12),
         ),
-        icon: Icon(icon, color: Colors.black, size: 20),
-        label: Text(
-          text,
-          style: const TextStyle(
-            fontFamily: 'Urbanist',
-            fontWeight: FontWeight.w700,
-            fontSize: 16,
-            color: Colors.black,
+        child: ElevatedButton.icon(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.transparent,
+            shadowColor: Colors.transparent,
+            foregroundColor: Colors.white,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            padding: const EdgeInsets.symmetric(vertical: 12),
           ),
+          icon: Icon(icon, color: Colors.white, size: 20),
+          label: Text(
+            text,
+            style: const TextStyle(
+              fontFamily: 'Urbanist',
+              fontWeight: FontWeight.w700,
+              fontSize: 16,
+              color: Colors.white,
+            ),
+          ),
+          onPressed: onPressed,
         ),
-        onPressed: onPressed,
       ),
     );
   }

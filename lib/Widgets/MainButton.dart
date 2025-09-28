@@ -23,7 +23,16 @@ class MainButton extends StatelessWidget {
       height: 52,
       decoration: BoxDecoration(
         color: backgroundColor,
-        gradient: gradient,
+        gradient:
+            gradient ??
+            const LinearGradient(
+              colors: [
+                Color(0xFF5500FF), // left color
+                Color(0xFFFB7B7B), // right color
+              ],
+              begin: Alignment.centerLeft,
+              end: Alignment.centerRight,
+            ),
         borderRadius: BorderRadius.circular(12),
       ),
       child: TextButton(
@@ -33,6 +42,7 @@ class MainButton extends StatelessWidget {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
           ),
+          foregroundColor: textColor,
         ),
         child: Text(
           text,

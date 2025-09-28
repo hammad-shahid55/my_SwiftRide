@@ -10,35 +10,48 @@ class GoogleButton extends StatelessWidget {
     return SizedBox(
       width: double.infinity,
       height: 50,
-      child: OutlinedButton.icon(
-        style: OutlinedButton.styleFrom(
-          backgroundColor: Colors.white,
-          foregroundColor: Colors.black,
-          side: const BorderSide(
-            color: Color.fromRGBO(226, 223, 223, 1),
-            width: 1,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [
+              Color(0xFF5500FF), // left color
+              Color(0xFFFB7B7B), // right color
+            ],
+            begin: Alignment.centerLeft,
+            end: Alignment.centerRight,
           ),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: ElevatedButton.icon(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.transparent,
+            shadowColor: Colors.transparent,
+            foregroundColor: Colors.white,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
           ),
-          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-        ).copyWith(
-          overlayColor: WidgetStateProperty.all(Colors.grey.withOpacity(0.1)),
-        ),
-        icon: Padding(
-          padding: const EdgeInsets.only(right: 8),
-          child: Image.asset('assets/google_logo.png', width: 24, height: 24),
-        ),
-        label: const Text(
-          "Continue with Google",
-          style: TextStyle(
-            fontFamily: 'Urbanist',
-            fontWeight: FontWeight.w700,
-            fontSize: 16,
-            color: Colors.black,
+          icon: Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: Image.asset(
+              'assets/google_logo.png',
+              width: 24,
+              height: 24,
+              color: Colors.white, // make icon visible on gradient
+            ),
           ),
+          label: const Text(
+            "Continue with Google",
+            style: TextStyle(
+              fontFamily: 'Urbanist',
+              fontWeight: FontWeight.w700,
+              fontSize: 16,
+              color: Colors.white,
+            ),
+          ),
+          onPressed: onPressed,
         ),
-        onPressed: onPressed,
       ),
     );
   }
