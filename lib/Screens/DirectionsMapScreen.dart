@@ -11,7 +11,7 @@ import 'package:flutter/services.dart';
 class DirectionsMapScreen extends StatefulWidget {
   final String fromAddress;
   final String toAddress;
-  final Map<String, dynamic> trip; // 👈 trip details
+  final Map<String, dynamic> trip;
 
   const DirectionsMapScreen({
     super.key,
@@ -34,11 +34,9 @@ class _DirectionsMapScreenState extends State<DirectionsMapScreen> {
   BitmapDescriptor? pickupIcon;
   BitmapDescriptor? dropoffIcon;
 
-  final directions = gmw.GoogleMapsDirections(
-    apiKey: 'AIzaSyCMH5gotuF6vrX4z8Ak4JFfDhpyvL43g50',
-  );
+  final directions = gmw.GoogleMapsDirections(apiKey: 'YOUR_API_KEY_HERE');
 
-  bool _isDark = false;
+  int bookedSeats = 1;
 
   @override
   void initState() {
@@ -144,9 +142,14 @@ class _DirectionsMapScreenState extends State<DirectionsMapScreen> {
   @override
   Widget build(BuildContext context) {
     final trip = widget.trip;
+    final totalSeats = trip['total_seats'] ?? 1;
 
     return Scaffold(
       appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () => Navigator.pop(context),
+        ),
         title: const Text(
           'Booking Details',
           style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
@@ -156,50 +159,48 @@ class _DirectionsMapScreenState extends State<DirectionsMapScreen> {
       body:
           (fromLatLng == null || toLatLng == null)
               ? const Center(child: CircularProgressIndicator())
-              : Padding(
-                padding: const EdgeInsets.all(8.0), // 👈 padding map ke around
-                child: Stack(
-                  children: [
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(16), // 👈 rounded map
-                      child: GoogleMap(
-                        initialCameraPosition: CameraPosition(
-                          target: fromLatLng!,
-                          zoom: 12,
-                        ),
-                        polylines: _polylines,
-                        markers: {
-                          Marker(
-                            markerId: const MarkerId('from'),
-                            position: fromLatLng!,
-                            icon:
-                                pickupIcon ??
-                                BitmapDescriptor.defaultMarkerWithHue(
-                                  BitmapDescriptor.hueBlue,
-                                ),
-                            infoWindow: const InfoWindow(title: 'Pickup'),
-                          ),
-                          Marker(
-                            markerId: const MarkerId('to'),
-                            position: toLatLng!,
-                            icon:
-                                dropoffIcon ??
-                                BitmapDescriptor.defaultMarkerWithHue(
-                                  BitmapDescriptor.hueRed,
-                                ),
-                            infoWindow: const InfoWindow(title: 'Drop-off'),
-                          ),
-                        },
-                        onMapCreated: (controller) {
-                          mapController = controller;
-                        },
+              : Stack(
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(16),
+                    child: GoogleMap(
+                      initialCameraPosition: CameraPosition(
+                        target: fromLatLng!,
+                        zoom: 12,
                       ),
+                      polylines: _polylines,
+                      markers: {
+                        Marker(
+                          markerId: const MarkerId('from'),
+                          position: fromLatLng!,
+                          icon:
+                              pickupIcon ??
+                              BitmapDescriptor.defaultMarkerWithHue(
+                                BitmapDescriptor.hueBlue,
+                              ),
+                          infoWindow: const InfoWindow(title: 'Pickup'),
+                        ),
+                        Marker(
+                          markerId: const MarkerId('to'),
+                          position: toLatLng!,
+                          icon:
+                              dropoffIcon ??
+                              BitmapDescriptor.defaultMarkerWithHue(
+                                BitmapDescriptor.hueRed,
+                              ),
+                          infoWindow: const InfoWindow(title: 'Drop-off'),
+                        ),
+                      },
+                      onMapCreated: (controller) {
+                        mapController = controller;
+                      },
                     ),
-                    // Booking details card
-                    Positioned(
-                      bottom: 0,
-                      left: 0,
-                      right: 0,
+                  ),
+                  Positioned(
+                    bottom: 0,
+                    left: 0,
+                    right: 0,
+                    child: SingleChildScrollView(
                       child: Container(
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
@@ -227,16 +228,62 @@ class _DirectionsMapScreenState extends State<DirectionsMapScreen> {
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                Text(
-                                  "Price: ${trip['price']} PKR",
-                                  style: const TextStyle(
-                                    fontSize: 16,
-                                    color: Colors.green,
+                                Flexible(
+                                  child: Text(
+                                    "Price per Seat: ${trip['price']} PKR",
+                                    style: const TextStyle(
+                                      fontSize: 16,
+                                      color: Colors.green,
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
                                   ),
                                 ),
+                                Flexible(
+                                  child: Text(
+                                    "Seats Available: $totalSeats",
+                                    style: const TextStyle(fontSize: 16),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 12),
+                            Wrap(
+                              crossAxisAlignment: WrapCrossAlignment.center,
+                              spacing: 8,
+                              children: [
+                                const Text(
+                                  "Book Seats: ",
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                IconButton(
+                                  icon: const Icon(Icons.remove_circle_outline),
+                                  onPressed:
+                                      bookedSeats > 1
+                                          ? () => setState(() => bookedSeats--)
+                                          : null,
+                                ),
                                 Text(
-                                  "Seats: ${trip['total_seats']}",
+                                  "$bookedSeats",
                                   style: const TextStyle(fontSize: 16),
+                                ),
+                                IconButton(
+                                  icon: const Icon(Icons.add_circle_outline),
+                                  onPressed:
+                                      bookedSeats < totalSeats
+                                          ? () => setState(() => bookedSeats++)
+                                          : null,
+                                ),
+                                Text(
+                                  "Total: ${bookedSeats * trip['price']} PKR",
+                                  style: const TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.green,
+                                  ),
                                 ),
                               ],
                             ),
@@ -257,10 +304,11 @@ class _DirectionsMapScreenState extends State<DirectionsMapScreen> {
                                 ),
                               ),
                               onPressed: () {
-                                // 👇 Booking logic yahan dalna hai
                                 ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text("Booking Confirmed!"),
+                                  SnackBar(
+                                    content: Text(
+                                      "Booking Confirmed for $bookedSeats seat(s)! Total: ${bookedSeats * trip['price']} PKR",
+                                    ),
                                   ),
                                 );
                               },
@@ -276,8 +324,8 @@ class _DirectionsMapScreenState extends State<DirectionsMapScreen> {
                         ),
                       ),
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
     );
   }
