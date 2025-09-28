@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:swift_ride/Widgets/theme.dart';
 
 class BecomeDriverScreen extends StatelessWidget {
   const BecomeDriverScreen({super.key});
@@ -6,7 +7,13 @@ class BecomeDriverScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Become a Driver")),
+      appBar: AppBar(
+        title: const Text("Become a Driver"),
+        backgroundColor: Colors.transparent,
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(gradient: AppTheme.mainGradient),
+        ),
+      ),
       body: const Padding(
         padding: EdgeInsets.all(16.0),
         child: Column(

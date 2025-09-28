@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:swift_ride/Screens/HomeScreen.dart';
+import 'package:swift_ride/Widgets/theme.dart';
 
 class UserProfileScreen extends StatefulWidget {
   const UserProfileScreen({super.key});
@@ -185,7 +186,10 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
           'Complete Your Profile',
           style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
         ),
-        backgroundColor: Colors.deepPurple,
+        backgroundColor: Colors.transparent,
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(gradient: AppTheme.mainGradient),
+        ),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),

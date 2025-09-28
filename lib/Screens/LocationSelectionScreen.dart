@@ -5,6 +5,7 @@ import 'package:geocoding/geocoding.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:swift_ride/Screens/SetLocationMapScreen.dart';
 import 'package:swift_ride/Screens/TripSelectionScreen.dart';
+import 'package:swift_ride/Widgets/theme.dart';
 
 class LocationSelectionScreen extends StatefulWidget {
   final String? initialValue;
@@ -265,7 +266,10 @@ class _LocationSelectionScreenState extends State<LocationSelectionScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: Colors.deepPurple,
+        backgroundColor: Colors.transparent,
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(gradient: AppTheme.mainGradient),
+        ),
         title: const Text(
           'Where are you going?',
           style: TextStyle(

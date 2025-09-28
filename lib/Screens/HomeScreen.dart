@@ -4,6 +4,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:swift_ride/Screens/LocationSelectionScreen.dart';
 import 'package:swift_ride/Screens/SignInScreen.dart';
 import 'package:swift_ride/Widgets/app_drawer.dart';
+import 'package:swift_ride/Widgets/theme.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -210,18 +211,24 @@ class _HomeScreenState extends State<HomeScreen> {
       onWillPop: _onWillPop,
       child: Scaffold(
         key: _scaffoldKey,
-        appBar: AppBar(
-          elevation: 0,
-          backgroundColor: Colors.deepPurple,
-          title: Text(
-            'Hey, $userName',
-            style: const TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
-              fontSize: 24,
+        appBar: PreferredSize(
+          preferredSize: const Size.fromHeight(kToolbarHeight),
+          child: AppBar(
+            automaticallyImplyLeading: true,
+            elevation: 0,
+            flexibleSpace: Container(
+              decoration: const BoxDecoration(gradient: AppTheme.mainGradient),
             ),
+            title: Text(
+              'Hey, $userName',
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 24,
+              ),
+            ),
+            iconTheme: const IconThemeData(color: Colors.white),
           ),
-          iconTheme: const IconThemeData(color: Colors.white),
         ),
         drawer: AppDrawer(
           userName: userName,
@@ -305,8 +312,6 @@ class _HomeScreenState extends State<HomeScreen> {
                   ],
                 ),
                 const SizedBox(height: 8),
-
-                // ✅ Completed Rides Section
                 if (completedRides.isNotEmpty)
                   Column(
                     children:
