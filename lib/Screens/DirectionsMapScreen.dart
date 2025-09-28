@@ -206,16 +206,10 @@ class _DirectionsMapScreenState extends State<DirectionsMapScreen> {
                         pricePerSeat: trip['price'] ?? 0,
                         fromCity: trip['from_city'],
                         toCity: trip['to_city'],
-                        onBookingConfirmed: (bookedSeats) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                "Booking Confirmed for $bookedSeats seat(s)! "
-                                "Route: ${trip['from_city']} → ${trip['to_city']}, "
-                                "Total: ${bookedSeats * trip['price']} PKR",
-                              ),
-                            ),
-                          );
+                        trip: trip,
+                        onBookingCompleted: () {
+                          // Refresh trips after booking
+                          setState(() {});
                         },
                       ),
                     ),
