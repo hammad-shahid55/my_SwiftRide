@@ -3,12 +3,16 @@ import 'package:flutter/material.dart';
 class BookingWidget extends StatefulWidget {
   final int totalSeats;
   final int pricePerSeat;
+  final String fromCity;
+  final String toCity;
   final Function(int bookedSeats) onBookingConfirmed;
 
   const BookingWidget({
     super.key,
     required this.totalSeats,
     required this.pricePerSeat,
+    required this.fromCity,
+    required this.toCity,
     required this.onBookingConfirmed,
   });
 
@@ -50,6 +54,16 @@ class _BookingWidgetState extends State<BookingWidget> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Show From → To
+          Text(
+            "${widget.fromCity} → ${widget.toCity}",
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: Colors.deepPurple,
+            ),
+          ),
+          const SizedBox(height: 12),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [

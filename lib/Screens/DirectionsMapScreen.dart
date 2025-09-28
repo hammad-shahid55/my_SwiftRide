@@ -204,11 +204,15 @@ class _DirectionsMapScreenState extends State<DirectionsMapScreen> {
                       child: BookingWidget(
                         totalSeats: trip['total_seats'] ?? 1,
                         pricePerSeat: trip['price'] ?? 0,
+                        fromCity: trip['from_city'],
+                        toCity: trip['to_city'],
                         onBookingConfirmed: (bookedSeats) {
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
                               content: Text(
-                                "Booking Confirmed for $bookedSeats seat(s)! Total: ${bookedSeats * trip['price']} PKR",
+                                "Booking Confirmed for $bookedSeats seat(s)! "
+                                "Route: ${trip['from_city']} → ${trip['to_city']}, "
+                                "Total: ${bookedSeats * trip['price']} PKR",
                               ),
                             ),
                           );
