@@ -17,11 +17,3 @@ class AppTheme {
   // Text color
   static const Color textColor = Colors.white;
 }
-
-
-  //  backgroundColor: Colors.transparent,
-  // flexibleSpace: Container(
-  //   decoration: const BoxDecoration(
-  //     gradient: AppTheme.mainGradient,
-  //   ),
-  // ),
