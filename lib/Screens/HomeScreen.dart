@@ -3,7 +3,6 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'package:swift_ride/Screens/LocationSelectionScreen.dart';
 import 'package:swift_ride/Screens/SignInScreen.dart';
-
 import 'package:swift_ride/Widgets/app_drawer.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -191,15 +190,16 @@ class _HomeScreenState extends State<HomeScreen> {
         key: _scaffoldKey,
         appBar: AppBar(
           elevation: 0,
-          backgroundColor: Colors.transparent,
+          backgroundColor: Colors.deepPurple,
           title: Text(
             'Hey, $userName',
             style: const TextStyle(
-              color: Colors.black,
+              color: Colors.white,
               fontWeight: FontWeight.bold,
               fontSize: 24,
             ),
           ),
+          iconTheme: const IconThemeData(color: Colors.white),
         ),
         drawer: AppDrawer(
           userName: userName,
@@ -239,7 +239,10 @@ class _HomeScreenState extends State<HomeScreen> {
                     children:
                         recentLocations.map((location) {
                           return Chip(
-                            avatar: const Icon(Icons.history),
+                            avatar: const Icon(
+                              Icons.history,
+                              color: Colors.deepPurple,
+                            ),
                             label: GestureDetector(
                               onTap:
                                   () => navigateToLocationSelection(
@@ -247,7 +250,10 @@ class _HomeScreenState extends State<HomeScreen> {
                                   ),
                               child: Text(location['address']),
                             ),
-                            deleteIcon: const Icon(Icons.close),
+                            deleteIcon: const Icon(
+                              Icons.close,
+                              color: Colors.deepPurple,
+                            ),
                             onDeleted: () => deleteLocation(location['id']),
                           );
                         }).toList(),
