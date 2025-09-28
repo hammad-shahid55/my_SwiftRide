@@ -331,7 +331,7 @@ class _SplashScreenState extends State<SplashScreen>
 
                                       // Loader
                                       if (_showLoader)
-                                        LoadingAnimationWidget.threeRotatingDots(
+                                        LoadingAnimationWidget.staggeredDotsWave(
                                           color: Colors.white,
                                           size:
                                               MediaQuery.of(
