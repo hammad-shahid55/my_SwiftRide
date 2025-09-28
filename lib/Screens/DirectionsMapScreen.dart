@@ -7,6 +7,7 @@ import 'package:google_maps_webservice/directions.dart' as gmw;
 import 'package:flutter_polyline_points/flutter_polyline_points.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:flutter/services.dart';
+import 'package:swift_ride/Widgets/BookingWidget.dart';
 
 class DirectionsMapScreen extends StatefulWidget {
   final String fromAddress;
@@ -34,9 +35,9 @@ class _DirectionsMapScreenState extends State<DirectionsMapScreen> {
   BitmapDescriptor? pickupIcon;
   BitmapDescriptor? dropoffIcon;
 
-  final directions = gmw.GoogleMapsDirections(apiKey: 'YOUR_API_KEY_HERE');
-
-  int bookedSeats = 1;
+  final directions = gmw.GoogleMapsDirections(
+    apiKey: 'AIzaSyCMH5gotuF6vrX4z8Ak4JFfDhpyvL43g50',
+  );
 
   @override
   void initState() {
@@ -142,7 +143,6 @@ class _DirectionsMapScreenState extends State<DirectionsMapScreen> {
   @override
   Widget build(BuildContext context) {
     final trip = widget.trip;
-    final totalSeats = trip['total_seats'] ?? 1;
 
     return Scaffold(
       appBar: AppBar(
@@ -201,130 +201,40 @@ class _DirectionsMapScreenState extends State<DirectionsMapScreen> {
                     left: 0,
                     right: 0,
                     child: SingleChildScrollView(
-                      child: Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: const BorderRadius.vertical(
-                            top: Radius.circular(20),
-                          ),
-                          boxShadow: [
-                            BoxShadow(color: Colors.black26, blurRadius: 6),
-                          ],
-                        ),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              "${trip['from_city']} → ${trip['to_city']}",
-                              style: const TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.deepPurple,
+                      child: BookingWidget(
+                        totalSeats: trip['total_seats'] ?? 1,
+                        pricePerSeat: trip['price'] ?? 0,
+                        onBookingConfirmed: (bookedSeats) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                "Booking Confirmed for $bookedSeats seat(s)! Total: ${bookedSeats * trip['price']} PKR",
                               ),
                             ),
-                            const SizedBox(height: 6),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Flexible(
-                                  child: Text(
-                                    "Price per Seat: ${trip['price']} PKR",
-                                    style: const TextStyle(
-                                      fontSize: 14,
-                                      color: Colors.green,
-                                    ),
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                                Flexible(
-                                  child: Text(
-                                    "Seats Available: $totalSeats",
-                                    style: const TextStyle(fontSize: 16),
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 12),
-                            Wrap(
-                              crossAxisAlignment: WrapCrossAlignment.center,
-                              spacing: 8,
-                              children: [
-                                const Text(
-                                  "Book Seats: ",
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                IconButton(
-                                  icon: const Icon(Icons.remove_circle_outline),
-                                  onPressed:
-                                      bookedSeats > 1
-                                          ? () => setState(() => bookedSeats--)
-                                          : null,
-                                ),
-                                Text(
-                                  "$bookedSeats",
-                                  style: const TextStyle(fontSize: 16),
-                                ),
-                                IconButton(
-                                  icon: const Icon(Icons.add_circle_outline),
-                                  onPressed:
-                                      bookedSeats < totalSeats
-                                          ? () => setState(() => bookedSeats++)
-                                          : null,
-                                ),
-                                Text(
-                                  "Total: ${bookedSeats * trip['price']} PKR",
-                                  style: const TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.green,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            if (totalDistance.isNotEmpty) ...[
-                              const SizedBox(height: 6),
-                              Text(
-                                "Route Distance: $totalDistance",
-                                style: const TextStyle(color: Colors.grey),
-                              ),
-                            ],
-                            const SizedBox(height: 12),
-                            ElevatedButton(
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.deepPurple,
-                                minimumSize: const Size(double.infinity, 48),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                              ),
-                              onPressed: () {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text(
-                                      "Booking Confirmed for $bookedSeats seat(s)! Total: ${bookedSeats * trip['price']} PKR",
-                                    ),
-                                  ),
-                                );
-                              },
-                              child: const Text(
-                                "Book Now",
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 16,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
+                          );
+                        },
                       ),
                     ),
                   ),
+                  if (totalDistance.isNotEmpty)
+                    Positioned(
+                      top: 10,
+                      left: 16,
+                      child: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.white70,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          "Route Distance: $totalDistance",
+                          style: const TextStyle(
+                            fontSize: 14,
+                            color: Colors.black87,
+                          ),
+                        ),
+                      ),
+                    ),
                 ],
               ),
     );
