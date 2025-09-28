@@ -153,7 +153,13 @@ class _DirectionsMapScreenState extends State<DirectionsMapScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Route Preview')),
+      appBar: AppBar(
+        title: const Text(
+          'Booking',
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        ),
+        backgroundColor: Colors.deepPurple,
+      ),
       body:
           (fromLatLng == null || toLatLng == null)
               ? const Center(child: CircularProgressIndicator())
