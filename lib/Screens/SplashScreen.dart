@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:swift_ride/Screens/EnableLocationScreen.dart';
 import 'package:swift_ride/Screens/OnBoardingScreen.dart';
@@ -9,6 +10,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:animated_text_kit/animated_text_kit.dart';
 import 'package:loading_animation_widget/loading_animation_widget.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:swift_ride/Screens/WelcomeScreen.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -71,7 +73,7 @@ class _SplashScreenState extends State<SplashScreen>
     });
   }
 
-  /// Check internet + location + first time + navigate
+  /// Check internet + location + first time + login + navigate
   Future<void> _checkInternetAndNavigate() async {
     final connectivityResult = await Connectivity().checkConnectivity();
     final hasInternet = connectivityResult != ConnectivityResult.none;
@@ -101,7 +103,20 @@ class _SplashScreenState extends State<SplashScreen>
         return;
       }
 
-      // Location check
+      // Check if user is logged in
+      final user = Supabase.instance.client.auth.currentUser;
+      if (user != null) {
+        // Logged in → go to HomeScreen
+        if (mounted) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const HomeScreen()),
+          );
+        }
+        return;
+      }
+
+      // Location check for new or logged out users
       bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
       LocationPermission permission = await Geolocator.checkPermission();
 
@@ -111,7 +126,7 @@ class _SplashScreenState extends State<SplashScreen>
         if (mounted) {
           Navigator.pushReplacement(
             context,
-            MaterialPageRoute(builder: (context) => const HomeScreen()),
+            MaterialPageRoute(builder: (context) => const WelcomeScreen()),
           );
         }
       } else {
@@ -172,7 +187,6 @@ class _SplashScreenState extends State<SplashScreen>
                         ),
                       ),
                     ),
-
                     // Decorative circles
                     Positioned(
                       top: -80,
@@ -198,8 +212,7 @@ class _SplashScreenState extends State<SplashScreen>
                         ),
                       ),
                     ),
-
-                    // Watermark image
+                    // Watermark
                     Positioned.fill(
                       child: Opacity(
                         opacity: 0.05,
@@ -210,7 +223,6 @@ class _SplashScreenState extends State<SplashScreen>
                         ),
                       ),
                     ),
-
                     // Main splash content
                     SingleChildScrollView(
                       physics: const AlwaysScrollableScrollPhysics(),
@@ -234,9 +246,7 @@ class _SplashScreenState extends State<SplashScreen>
                                               0.70,
                                         ),
                                       ),
-
                                       const SizedBox(height: 20),
-
                                       // Slide text
                                       if (_showSlideText)
                                         SlideTransition(
@@ -262,7 +272,6 @@ class _SplashScreenState extends State<SplashScreen>
                                             ),
                                           ),
                                         ),
-
                                       // Wavy text animation
                                       if (_showWavyText)
                                         AnimatedTextKit(
@@ -303,9 +312,7 @@ class _SplashScreenState extends State<SplashScreen>
                                             );
                                           },
                                         ),
-
                                       const SizedBox(height: 15),
-
                                       // Tagline
                                       if (_showTagline)
                                         AnimatedOpacity(
@@ -326,9 +333,7 @@ class _SplashScreenState extends State<SplashScreen>
                                             ),
                                           ),
                                         ),
-
                                       const SizedBox(height: 20),
-
                                       // Loader
                                       if (_showLoader)
                                         LoadingAnimationWidget.staggeredDotsWave(
