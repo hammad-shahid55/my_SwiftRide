@@ -232,7 +232,7 @@ class _DirectionsMapScreenState extends State<DirectionsMapScreen> {
                                   child: Text(
                                     "Price per Seat: ${trip['price']} PKR",
                                     style: const TextStyle(
-                                      fontSize: 16,
+                                      fontSize: 14,
                                       color: Colors.green,
                                     ),
                                     overflow: TextOverflow.ellipsis,
@@ -280,7 +280,7 @@ class _DirectionsMapScreenState extends State<DirectionsMapScreen> {
                                 Text(
                                   "Total: ${bookedSeats * trip['price']} PKR",
                                   style: const TextStyle(
-                                    fontSize: 16,
+                                    fontSize: 18,
                                     fontWeight: FontWeight.bold,
                                     color: Colors.green,
                                   ),
