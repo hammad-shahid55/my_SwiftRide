@@ -48,13 +48,17 @@ class AppDrawer extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     const SizedBox(height: 10),
-                    const CircleAvatar(
-                      radius: 40,
-                      backgroundColor: Colors.white,
-                      child: Icon(
-                        Icons.person,
-                        color: Colors.deepPurple,
-                        size: 50,
+                    // CircleAvatar wrapped with GestureDetector
+                    GestureDetector(
+                      onTap: () => onNavigate(const SettingsScreen()),
+                      child: const CircleAvatar(
+                        radius: 40,
+                        backgroundColor: Colors.white,
+                        child: Icon(
+                          Icons.person,
+                          color: Colors.deepPurple,
+                          size: 50,
+                        ),
                       ),
                     ),
                     const SizedBox(height: 10),

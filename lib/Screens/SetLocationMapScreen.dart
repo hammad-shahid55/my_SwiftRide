@@ -24,14 +24,17 @@ class _SetLocationMapScreenState extends State<SetLocationMapScreen> {
 
   Future<void> getCurrentLocation() async {
     final permission = await Geolocator.requestPermission();
-    if (permission == LocationPermission.denied || permission == LocationPermission.deniedForever) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text('Location permission is required.'),
-      ));
+    if (permission == LocationPermission.denied ||
+        permission == LocationPermission.deniedForever) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Location permission is required.')),
+      );
       return;
     }
 
-    final position = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
+    final position = await Geolocator.getCurrentPosition(
+      desiredAccuracy: LocationAccuracy.high,
+    );
 
     final LatLng currentLatLng = LatLng(position.latitude, position.longitude);
 
@@ -47,7 +50,10 @@ class _SetLocationMapScreenState extends State<SetLocationMapScreen> {
       searchController.text = '';
     });
 
-    final placemarks = await placemarkFromCoordinates(position.latitude, position.longitude);
+    final placemarks = await placemarkFromCoordinates(
+      position.latitude,
+      position.longitude,
+    );
     if (placemarks.isNotEmpty) {
       final p = placemarks.first;
       final address = '${p.name}, ${p.street}, ${p.locality}, ${p.country}';
@@ -99,45 +105,42 @@ class _SetLocationMapScreenState extends State<SetLocationMapScreen> {
   }
 
   Future<void> selectPrediction(AutocompletePrediction prediction) async {
-  final details = await googlePlace.details.get(prediction.placeId ?? '');
-if (details != null && details.result != null) {
-  final geometry = details.result!.geometry;
-  if (geometry != null && geometry.location != null) {
-    final location = geometry.location!;
-    final lat = location.lat;
-    final lng = location.lng;
-    if (lat != null && lng != null) {
-      final position = LatLng(lat, lng);
+    final details = await googlePlace.details.get(prediction.placeId ?? '');
+    if (details != null && details.result != null) {
+      final geometry = details.result!.geometry;
+      if (geometry != null && geometry.location != null) {
+        final location = geometry.location!;
+        final lat = location.lat;
+        final lng = location.lng;
+        if (lat != null && lng != null) {
+          final position = LatLng(lat, lng);
 
-      mapController?.animateCamera(CameraUpdate.newLatLngZoom(position, 15));
-      onMapTap(position);
+          mapController?.animateCamera(
+            CameraUpdate.newLatLngZoom(position, 15),
+          );
+          onMapTap(position);
 
-      setState(() {
-        searchController.text = prediction.description ?? '';
-        predictions = [];
-        searchFocusNode.unfocus();
-      });
+          setState(() {
+            searchController.text = prediction.description ?? '';
+            predictions = [];
+            searchFocusNode.unfocus();
+          });
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Latitude or Longitude is missing')),
+          );
+        }
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Geometry information is missing')),
+        );
+      }
     } else {
-      // lat or lng is null
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Latitude or Longitude is missing')),
+        const SnackBar(content: Text('Failed to fetch place details')),
       );
     }
-  } else {
-    // geometry or location is null
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Geometry information is missing')),
-    );
   }
-} else {
-  // details or result is null
-  ScaffoldMessenger.of(context).showSnackBar(
-    const SnackBar(content: Text('Failed to fetch place details')),
-  );
-}
-
-}
-
 
   @override
   void dispose() {
@@ -149,7 +152,19 @@ if (details != null && details.result != null) {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Set location on map')),
+      appBar: AppBar(
+        backgroundColor: Colors.deepPurple,
+        iconTheme: const IconThemeData(
+          color: Colors.white,
+        ), // back button white
+        title: const Text(
+          'Set location on map',
+          style: TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold, // title bold
+          ),
+        ),
+      ),
       body: Stack(
         children: [
           GoogleMap(
@@ -160,14 +175,15 @@ if (details != null && details.result != null) {
             onMapCreated: (controller) => mapController = controller,
             onTap: onMapTap,
             myLocationEnabled: false,
-            markers: selectedPosition != null
-                ? {
-                    Marker(
-                      markerId: const MarkerId('picked'),
-                      position: selectedPosition!,
-                    ),
-                  }
-                : {},
+            markers:
+                selectedPosition != null
+                    ? {
+                      Marker(
+                        markerId: const MarkerId('picked'),
+                        position: selectedPosition!,
+                      ),
+                    }
+                    : {},
           ),
 
           // Search box
@@ -187,24 +203,28 @@ if (details != null && details.result != null) {
                     decoration: InputDecoration(
                       prefixIcon: const Icon(Icons.search),
                       hintText: 'Search location',
-                      suffixIcon: searchController.text.isNotEmpty
-                          ? IconButton(
-                              icon: const Icon(Icons.clear),
-                              onPressed: () {
-                                setState(() {
-                                  searchController.clear();
-                                  predictions = [];
-                                });
-                              },
-                            )
-                          : null,
+                      suffixIcon:
+                          searchController.text.isNotEmpty
+                              ? IconButton(
+                                icon: const Icon(Icons.clear),
+                                onPressed: () {
+                                  setState(() {
+                                    searchController.clear();
+                                    predictions = [];
+                                  });
+                                },
+                              )
+                              : null,
                       border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                          borderSide: BorderSide.none),
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: BorderSide.none,
+                      ),
                       filled: true,
                       fillColor: Colors.white,
-                      contentPadding:
-                          const EdgeInsets.symmetric(horizontal: 15, vertical: 0),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 15,
+                        vertical: 0,
+                      ),
                     ),
                   ),
                 ),
@@ -220,7 +240,7 @@ if (details != null && details.result != null) {
                           color: Colors.black.withOpacity(0.1),
                           blurRadius: 10,
                           offset: const Offset(0, 5),
-                        )
+                        ),
                       ],
                     ),
                     child: ListView.builder(
@@ -252,7 +272,10 @@ if (details != null && details.result != null) {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text(selectedAddress!, style: const TextStyle(fontSize: 16)),
+                      Text(
+                        selectedAddress!,
+                        style: const TextStyle(fontSize: 16),
+                      ),
                       const SizedBox(height: 10),
                       ElevatedButton(
                         onPressed: onSave,

@@ -115,7 +115,6 @@ class _LocationSelectionScreenState extends State<LocationSelectionScreen> {
     }
   }
 
-  /// ✅ FIXED INSERT: Don't send id or inserted_at, DB will auto-fill
   Future<void> saveLocationToHistory(String address, String type) async {
     final user = supabase.auth.currentUser;
     if (user == null) return;
@@ -168,7 +167,11 @@ class _LocationSelectionScreenState extends State<LocationSelectionScreen> {
                   padding: EdgeInsets.all(12),
                   child: Text(
                     'Recent Destinations',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.deepPurple,
+                    ),
                   ),
                 ),
                 Expanded(
@@ -178,7 +181,10 @@ class _LocationSelectionScreenState extends State<LocationSelectionScreen> {
                     itemBuilder: (context, index) {
                       final item = locationHistory[index];
                       return ListTile(
-                        leading: const Icon(Icons.location_on),
+                        leading: const Icon(
+                          Icons.location_on,
+                          color: Colors.deepPurple,
+                        ),
                         title: Text(item['address']),
                         onTap: () {
                           Navigator.pop(context);
@@ -259,9 +265,17 @@ class _LocationSelectionScreenState extends State<LocationSelectionScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Where are you going?'),
+        backgroundColor: Colors.deepPurple,
+        title: const Text(
+          'Where are you going?',
+          style: TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+            fontSize: 20,
+          ),
+        ),
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () => Navigator.pop(context),
         ),
       ),
@@ -278,18 +292,24 @@ class _LocationSelectionScreenState extends State<LocationSelectionScreen> {
                   autoCompleteSearch(value);
                 },
                 decoration: InputDecoration(
-                  prefixIcon: const Icon(Icons.my_location, color: Colors.blue),
+                  prefixIcon: const Icon(
+                    Icons.my_location,
+                    color: Colors.deepPurple,
+                  ),
                   hintText: 'From (Enter location or use GPS)',
                   suffixIcon: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       IconButton(
-                        icon: const Icon(Icons.my_location_outlined),
+                        icon: const Icon(
+                          Icons.my_location_outlined,
+                          color: Colors.deepPurple,
+                        ),
                         tooltip: 'Use Current Location',
                         onPressed: () => setCurrentLocation('from'),
                       ),
                       IconButton(
-                        icon: const Icon(Icons.map),
+                        icon: const Icon(Icons.map, color: Colors.deepPurple),
                         tooltip: 'Set location on map',
                         onPressed: () async {
                           final result = await Navigator.push(
@@ -298,7 +318,6 @@ class _LocationSelectionScreenState extends State<LocationSelectionScreen> {
                               builder: (_) => const SetLocationMapScreen(),
                             ),
                           );
-
                           if (result != null && result['address'] != null) {
                             setState(() {
                               fromController.text = result['address'];
@@ -308,7 +327,7 @@ class _LocationSelectionScreenState extends State<LocationSelectionScreen> {
                         },
                       ),
                       IconButton(
-                        icon: const Icon(Icons.clear),
+                        icon: const Icon(Icons.clear, color: Colors.deepPurple),
                         onPressed: () => fromController.clear(),
                       ),
                     ],
@@ -320,7 +339,7 @@ class _LocationSelectionScreenState extends State<LocationSelectionScreen> {
               ),
             ),
 
-            const Icon(Icons.swap_vert, size: 32),
+            const Icon(Icons.swap_vert, size: 32, color: Colors.deepPurple),
 
             // To field
             Padding(
@@ -333,18 +352,24 @@ class _LocationSelectionScreenState extends State<LocationSelectionScreen> {
                   autoCompleteSearch(value);
                 },
                 decoration: InputDecoration(
-                  prefixIcon: const Icon(Icons.location_on, color: Colors.blue),
+                  prefixIcon: const Icon(
+                    Icons.location_on,
+                    color: Colors.deepPurple,
+                  ),
                   hintText: 'To (Enter Destination)',
                   suffixIcon: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       IconButton(
-                        icon: const Icon(Icons.my_location_outlined),
+                        icon: const Icon(
+                          Icons.my_location_outlined,
+                          color: Colors.deepPurple,
+                        ),
                         tooltip: 'Use Current Location',
                         onPressed: () => setCurrentLocation('to'),
                       ),
                       IconButton(
-                        icon: const Icon(Icons.map),
+                        icon: const Icon(Icons.map, color: Colors.deepPurple),
                         tooltip: 'Set location on map',
                         onPressed: () async {
                           final result = await Navigator.push(
@@ -353,7 +378,6 @@ class _LocationSelectionScreenState extends State<LocationSelectionScreen> {
                               builder: (_) => const SetLocationMapScreen(),
                             ),
                           );
-
                           if (result != null && result['address'] != null) {
                             setState(() {
                               toController.text = result['address'];
@@ -363,7 +387,7 @@ class _LocationSelectionScreenState extends State<LocationSelectionScreen> {
                         },
                       ),
                       IconButton(
-                        icon: const Icon(Icons.clear),
+                        icon: const Icon(Icons.clear, color: Colors.deepPurple),
                         onPressed: () => toController.clear(),
                       ),
                     ],
@@ -378,13 +402,20 @@ class _LocationSelectionScreenState extends State<LocationSelectionScreen> {
             buildPredictionList(),
 
             ListTile(
-              leading: const Icon(Icons.history),
-              title: const Text('Recent Destinations'),
+              leading: const Icon(Icons.history, color: Colors.deepPurple),
+              title: const Text(
+                'Recent Destinations',
+                style: TextStyle(color: Colors.deepPurple),
+              ),
               onTap: () => showHistoryModal(context),
             ),
 
             const SizedBox(height: 16),
             ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.deepPurple,
+                foregroundColor: Colors.white,
+              ),
               icon: const Icon(Icons.search),
               label: const Text("Search Trip"),
               onPressed: () {
