@@ -1,5 +1,7 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:http/http.dart' as http;
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:swift_ride/Screens/DirectionsMapScreen.dart';
 import 'package:timezone/timezone.dart' as tz;
@@ -23,62 +25,108 @@ class _TripSelectionScreenState extends State<TripSelectionScreen>
   bool isLoading = true;
 
   final supabase = Supabase.instance.client;
+  final String googleMapsApiKey = 'YOUR_GOOGLE_MAPS_KEY';
 
   @override
   void initState() {
     super.initState();
     tzdata.initializeTimeZones();
-
     final today = tz.TZDateTime.now(tz.getLocation('Asia/Karachi'));
     weekDays = List.generate(7, (index) {
       final date = today.add(Duration(days: index));
       return index == 0 ? "Today" : DateFormat('EEE').format(date);
     });
-
     _tabController = TabController(length: weekDays.length, vsync: this);
-
     fetchTrips();
   }
 
-  Future<void> fetchTrips() async {
-    setState(() => isLoading = true);
-
-    final fromCity = widget.from.trim();
-    final toCity = widget.to.trim();
-
-    final today = DateTime.now();
-    final next7Days = today.add(Duration(days: 6));
-
+  Future<Map<String, dynamic>?> fetchDistanceDuration(
+    String origin,
+    String destination,
+  ) async {
     try {
-      // Fetch only next 7 days trips
-      final response = await supabase
+      final url = Uri.parse(
+        'https://maps.googleapis.com/maps/api/distancematrix/json?units=metric&origins=$origin&destinations=$destination&key=$googleMapsApiKey',
+      );
+
+      final response = await http.get(url);
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['rows'] != null &&
+            data['rows'].isNotEmpty &&
+            data['rows'][0]['elements'] != null &&
+            data['rows'][0]['elements'].isNotEmpty) {
+          final element = data['rows'][0]['elements'][0];
+          if (element['status'] == 'OK') {
+            return {
+              'distance': element['distance']['text'],
+              'duration': element['duration']['text'],
+            };
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint('Distance Matrix API error: $e');
+    }
+    return null;
+  }
+
+  Future<void> fetchTrips() async {
+    try {
+      setState(() => isLoading = true);
+      final today = tz.TZDateTime.now(tz.getLocation('Asia/Karachi'));
+      final fromCity = widget.from.trim();
+      final toCity = widget.to.trim();
+
+      final tripsFromTo = await supabase
           .from('trips')
           .select()
-          .or('from_city.eq.$fromCity,to_city.eq.$toCity')
-          .gte('depart_time', today.toIso8601String())
-          .lte('depart_time', next7Days.toIso8601String())
+          .eq('from_city', fromCity)
+          .eq('to_city', toCity)
           .order('depart_time', ascending: true);
 
-      Map<String, List<Map<String, dynamic>>> loadedTrips = {};
-      for (var i = 0; i < 7; i++) {
-        final date = today.add(Duration(days: i));
-        final dayName = i == 0 ? "Today" : DateFormat('EEE').format(date);
+      final tripsToFrom = await supabase
+          .from('trips')
+          .select()
+          .eq('from_city', toCity)
+          .eq('to_city', fromCity)
+          .order('depart_time', ascending: true);
 
-        final tripsForDay =
-            response.where((trip) {
-              final depart = DateTime.parse(trip['depart_time']);
-              return depart.year == date.year &&
-                  depart.month == date.month &&
-                  depart.day == date.day;
-            }).toList();
+      final response = [...tripsFromTo, ...tripsToFrom];
 
-        loadedTrips[dayName] = tripsForDay;
+      if (response.isNotEmpty) {
+        Map<String, List<Map<String, dynamic>>> loadedTrips = {};
+        for (var i = 0; i < 7; i++) {
+          final date = today.add(Duration(days: i));
+          final dayName = i == 0 ? "Today" : DateFormat('EEE').format(date);
+
+          final tripsForDay =
+              response.where((trip) {
+                DateTime departUtc =
+                    DateTime.parse(trip['depart_time']).toUtc();
+                final departDatePKT = tz.TZDateTime.from(
+                  departUtc,
+                  tz.getLocation('Asia/Karachi'),
+                );
+                return departDatePKT.day == date.day &&
+                    departDatePKT.month == date.month &&
+                    departDatePKT.year == date.year;
+              }).toList();
+
+          // No API call needed, values already in trip
+          loadedTrips[dayName] = tripsForDay;
+        }
+
+        setState(() {
+          tripData = loadedTrips;
+          isLoading = false;
+        });
+      } else {
+        setState(() {
+          tripData = {};
+          isLoading = false;
+        });
       }
-
-      setState(() {
-        tripData = loadedTrips;
-        isLoading = false;
-      });
     } catch (e) {
       debugPrint("Error fetching trips: $e");
       setState(() => isLoading = false);
@@ -118,17 +166,18 @@ class _TripSelectionScreenState extends State<TripSelectionScreen>
                 controller: _tabController,
                 children:
                     weekDays.map((day) {
-                      final trips = tripData[day] ?? [];
+                      String key = day == weekDays[0] ? "Today" : day;
+                      final trips = tripData[key] ?? [];
                       final filteredTrips =
-                          day == "Today"
+                          key == "Today"
                               ? trips.where((trip) {
-                                final departUtc =
+                                DateTime departUtc =
                                     DateTime.parse(trip['depart_time']).toUtc();
-                                final departPKT = tz.TZDateTime.from(
+                                final departTimePKT = tz.TZDateTime.from(
                                   departUtc,
                                   tz.getLocation('Asia/Karachi'),
                                 );
-                                return departPKT.isAfter(nowPKT);
+                                return departTimePKT.isAfter(nowPKT);
                               }).toList()
                               : trips;
 
@@ -149,21 +198,21 @@ class _TripSelectionScreenState extends State<TripSelectionScreen>
                           itemBuilder: (context, index) {
                             final trip = filteredTrips[index];
 
-                            final departUtc =
-                                DateTime.parse(trip['depart_time']).toUtc();
-                            final arriveUtc =
-                                DateTime.parse(trip['arrive_time']).toUtc();
+                            DateTime departUtc =
+                                DateTime.parse(trip["depart_time"]).toUtc();
+                            DateTime arriveUtc =
+                                DateTime.parse(trip["arrive_time"]).toUtc();
 
-                            final departPKT = tz.TZDateTime.from(
+                            final departTimePKT = tz.TZDateTime.from(
                               departUtc,
                               tz.getLocation('Asia/Karachi'),
                             );
-                            final arrivePKT = tz.TZDateTime.from(
+                            final arriveTimePKT = tz.TZDateTime.from(
                               arriveUtc,
                               tz.getLocation('Asia/Karachi'),
                             );
 
-                            final totalSeats = trip['total_seats'] ?? 14;
+                            final totalSeats = trip['total_seats'] ?? 12;
 
                             return InkWell(
                               onTap: () {
@@ -195,7 +244,7 @@ class _TripSelectionScreenState extends State<TripSelectionScreen>
                                           Text(
                                             DateFormat(
                                               'hh:mm a',
-                                            ).format(departPKT),
+                                            ).format(departTimePKT),
                                             style: const TextStyle(
                                               fontSize: 18,
                                               fontWeight: FontWeight.bold,
@@ -212,7 +261,7 @@ class _TripSelectionScreenState extends State<TripSelectionScreen>
                                           Text(
                                             DateFormat(
                                               'hh:mm a',
-                                            ).format(arrivePKT),
+                                            ).format(arriveTimePKT),
                                             style: const TextStyle(
                                               fontSize: 18,
                                               fontWeight: FontWeight.bold,
@@ -223,7 +272,7 @@ class _TripSelectionScreenState extends State<TripSelectionScreen>
                                       ),
                                       const SizedBox(height: 5),
                                       Text(
-                                        "${trip["from_city"]} → ${trip["to_city"]}",
+                                        "${trip["from"]} → ${trip["to"]}",
                                         style: const TextStyle(
                                           fontWeight: FontWeight.w600,
                                           color: Colors.deepPurple,
@@ -283,14 +332,14 @@ class _TripSelectionScreenState extends State<TripSelectionScreen>
                                             MainAxisAlignment.spaceBetween,
                                         children: [
                                           Text(
-                                            'Distance: ${trip['distance_text']}',
+                                            'Distance: ${trip['distance_text'] ?? 'N/A'}',
                                             style: const TextStyle(
                                               fontWeight: FontWeight.w600,
                                               color: Colors.deepPurple,
                                             ),
                                           ),
                                           Text(
-                                            'Duration: ${trip['duration_text']}',
+                                            'Duration: ${trip['duration_text'] ?? 'N/A'}',
                                             style: const TextStyle(
                                               fontWeight: FontWeight.w600,
                                               color: Colors.deepPurple,
