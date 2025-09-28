@@ -86,14 +86,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
         _profileImageUrl = publicURL;
       });
 
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Profile picture updated!')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Profile picture updated!'),
+          backgroundColor: Colors.green,
+        ),
+      );
     } catch (e) {
       debugPrint('Upload error: $e');
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Upload failed: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Upload failed: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
     } finally {
       setState(() {
         _uploading = false;
@@ -106,26 +112,69 @@ class _SettingsScreenState extends State<SettingsScreen> {
     if (user == null) return;
 
     if (_formKey.currentState!.validate()) {
-      final updates = {
-        'id': user.id,
-        'name': _nameController.text.trim(),
-        'phone': _phoneController.text.trim(),
-        'address': _addressController.text.trim(),
-        'profile_pic': _profileImageUrl,
-        'updated_at': DateTime.now().toIso8601String(),
-      };
-
       try {
-        await supabase.from('profiles').upsert(updates);
+        final currentData =
+            await supabase
+                .from('profiles')
+                .select()
+                .eq('id', user.id)
+                .maybeSingle();
 
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('Profile updated!')));
+        if (currentData == null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Profile not found!'),
+              backgroundColor: Colors.red,
+            ),
+          );
+          return;
+        }
+
+        final Map<String, dynamic> updates = {};
+
+        if (_nameController.text.trim() != (currentData['name'] ?? '')) {
+          updates['name'] = _nameController.text.trim();
+        }
+        if (_phoneController.text.trim() != (currentData['phone'] ?? '')) {
+          updates['phone'] = _phoneController.text.trim();
+        }
+        if (_addressController.text.trim() != (currentData['address'] ?? '')) {
+          updates['address'] = _addressController.text.trim();
+        }
+        if (_profileImageUrl != (currentData['profile_pic'] ?? '')) {
+          updates['profile_pic'] = _profileImageUrl;
+        }
+
+        if (updates.isEmpty) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('No changes to update.'),
+              backgroundColor: Colors.orange,
+            ),
+          );
+          return;
+        }
+
+        updates['updated_at'] = DateTime.now().toIso8601String();
+
+        await supabase.from('profiles').update(updates).eq('id', user.id);
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Profile updated successfully!'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
       } catch (e) {
         debugPrint('Update error: $e');
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Error updating: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error updating: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
       }
     }
   }
@@ -135,35 +184,54 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final size = MediaQuery.of(context).size;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Profile Settings')),
+      appBar: AppBar(
+        title: const Text(
+          'Profile Settings',
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        ),
+        iconTheme: const IconThemeData(color: Colors.white),
+        backgroundColor: Colors.deepPurple,
+      ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Form(
           key: _formKey,
           child: Column(
             children: [
-              Stack(
-                children: [
-                  CircleAvatar(
-                    radius: 50,
-                    backgroundImage:
-                        _profileImageUrl != null
-                            ? NetworkImage(_profileImageUrl!)
-                            : null,
-                    child:
-                        _profileImageUrl == null
-                            ? const Icon(Icons.person, size: 50)
-                            : null,
-                  ),
-                  Positioned(
-                    bottom: 0,
-                    right: 0,
-                    child: IconButton(
-                      icon: const Icon(Icons.camera_alt),
-                      onPressed: _uploading ? null : _pickAndUploadImage,
+              GestureDetector(
+                onTap: _uploading ? null : _pickAndUploadImage,
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    CircleAvatar(
+                      radius: 60,
+                      backgroundImage:
+                          _profileImageUrl != null
+                              ? NetworkImage(_profileImageUrl!)
+                              : null,
+                      child:
+                          _profileImageUrl == null
+                              ? const Icon(Icons.person, size: 60)
+                              : null,
                     ),
-                  ),
-                ],
+                    Positioned(
+                      bottom: 0,
+                      right: 0,
+                      child: CircleAvatar(
+                        backgroundColor: Colors.white,
+                        radius: 20,
+                        child: IconButton(
+                          icon: const Icon(
+                            Icons.camera_alt,
+                            size: 20,
+                            color: Colors.black,
+                          ),
+                          onPressed: _uploading ? null : _pickAndUploadImage,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
               const SizedBox(height: 20),
               TextFormField(
@@ -171,6 +239,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 decoration: const InputDecoration(
                   labelText: 'Full Name',
                   border: OutlineInputBorder(),
+                  suffixIcon: Icon(Icons.edit),
                 ),
                 validator: (value) {
                   if (value == null || value.isEmpty) {
@@ -190,6 +259,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 decoration: const InputDecoration(
                   labelText: 'Email',
                   border: OutlineInputBorder(),
+                  suffixIcon: Icon(Icons.lock),
                 ),
               ),
               const SizedBox(height: 16),
@@ -198,6 +268,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 decoration: const InputDecoration(
                   labelText: 'Phone Number',
                   border: OutlineInputBorder(),
+                  suffixIcon: Icon(Icons.edit),
                 ),
                 keyboardType: TextInputType.phone,
                 validator: (value) {
@@ -217,6 +288,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 decoration: const InputDecoration(
                   labelText: 'Address',
                   border: OutlineInputBorder(),
+                  suffixIcon: Icon(Icons.edit),
                 ),
                 maxLines: 2,
                 validator:
@@ -231,6 +303,23 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   onPressed: _uploading ? null : _updateProfile,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF7B3DF4),
+                    foregroundColor: Colors.white,
+                    shadowColor: Colors.deepPurpleAccent,
+                    elevation: 5,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ).copyWith(
+                    overlayColor: MaterialStateProperty.resolveWith<Color?>((
+                      states,
+                    ) {
+                      if (states.contains(MaterialState.pressed)) {
+                        return Colors.purpleAccent.withOpacity(
+                          0.5,
+                        ); // highlight
+                      }
+                      return null;
+                    }),
                   ),
                   child:
                       _uploading
