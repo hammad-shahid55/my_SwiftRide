@@ -1,18 +1,26 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_stripe/flutter_stripe.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 import 'package:swift_ride/Screens/SplashScreen.dart';
 
-const supabaseUrl = 'https://ffsqsalfmwjnauamlobc.supabase.co';
-const supabaseKey =
-    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZmc3FzYWxmbXdqbmF1YW1sb2JjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTIzNDMxNjYsImV4cCI6MjA2NzkxOTE2Nn0.CzOTqwA7puMP48Ay2P1KmrYihUb8Asdkr--fK3_reSw';
+const supabaseUrl = String.fromEnvironment('SUPABASE_URL');
+const supabaseKey = String.fromEnvironment('SUPABASE_ANON_KEY');
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  Stripe.publishableKey =
-      'pk_test_51RiEs3Qqz4NjHb2sF9VzGQUIdlZZhRkjPwxxhk1UbvucJoxFctjm5sIxeomxNcpoPrtKkttHGRRcpSchMfzdE5CS00jyNU97OB';
-  await Supabase.initialize(url: supabaseUrl, anonKey: supabaseKey);
+  try {
+    await dotenv.load(fileName: '.env');
+  } catch (_) {}
+
+  final envSupabaseUrl = dotenv.env['SUPABASE_URL'] ?? supabaseUrl;
+  final envSupabaseKey = dotenv.env['SUPABASE_ANON_KEY'] ?? supabaseKey;
+  final stripeKey = dotenv.env['STRIPE_PUBLISHABLE_KEY'] ?? '';
+  if (stripeKey.isNotEmpty) {
+    Stripe.publishableKey = stripeKey;
+  }
+  await Supabase.initialize(url: envSupabaseUrl, anonKey: envSupabaseKey);
 
   runApp(MainApp());
 }

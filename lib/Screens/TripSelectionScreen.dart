@@ -7,6 +7,7 @@ import 'package:swift_ride/Screens/DirectionsMapScreen.dart';
 import 'package:swift_ride/Widgets/theme.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'package:timezone/data/latest_all.dart' as tzdata;
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class TripSelectionScreen extends StatefulWidget {
   final String from;
@@ -26,7 +27,7 @@ class _TripSelectionScreenState extends State<TripSelectionScreen>
   bool isLoading = true;
 
   final supabase = Supabase.instance.client;
-  final String googleMapsApiKey = 'YOUR_GOOGLE_MAPS_KEY';
+  final String googleMapsApiKey = dotenv.env['GOOGLE_MAPS_API_KEY'] ?? '';
 
   @override
   void initState() {
