@@ -28,7 +28,9 @@ class _BookingWidgetState extends State<BookingWidget> {
   final supabase = Supabase.instance.client;
 
   void _increaseSeats() {
-    if (bookedSeats < widget.totalSeats) setState(() => bookedSeats++);
+    final int totalSeats =
+        (widget.trip['total_seats'] ?? widget.totalSeats) as int;
+    if (bookedSeats < totalSeats) setState(() => bookedSeats++);
   }
 
   void _decreaseSeats() {
@@ -36,30 +38,37 @@ class _BookingWidgetState extends State<BookingWidget> {
   }
 
   Future<void> _bookSeats() async {
-    final totalPrice = bookedSeats * widget.pricePerSeat;
+    final int pricePerSeat =
+        (widget.trip['price'] ?? widget.pricePerSeat) as int;
+    final totalPrice = bookedSeats * pricePerSeat;
+    final String fromCity =
+        (widget.trip['from_city'] ?? widget.fromCity) as String;
+    final String toCity = (widget.trip['to_city'] ?? widget.toCity) as String;
 
-    bool confirmed = await showDialog(
-      context: context,
-      builder:
-          (_) => AlertDialog(
-            title: const Text("Confirm Booking"),
-            content: Text(
-              "Seats: $bookedSeats\nPrice: $totalPrice PKR\nFrom: ${widget.fromCity}\nTo: ${widget.toCity}",
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context, false),
-                child: const Text("Cancel"),
+    final bool confirmed =
+        await showDialog<bool>(
+          context: context,
+          builder:
+              (_) => AlertDialog(
+                title: const Text("Confirm Booking"),
+                content: Text(
+                  "Seats: $bookedSeats\nPrice: $totalPrice PKR\nFrom: $fromCity\nTo: $toCity",
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context, false),
+                    child: const Text("Cancel"),
+                  ),
+                  ElevatedButton(
+                    onPressed: () => Navigator.pop(context, true),
+                    child: const Text("Confirm"),
+                  ),
+                ],
               ),
-              ElevatedButton(
-                onPressed: () => Navigator.pop(context, true),
-                child: const Text("Confirm"),
-              ),
-            ],
-          ),
-    );
+        ) ??
+        false;
 
-    if (confirmed != null && confirmed) {
+    if (confirmed) {
       try {
         final user = supabase.auth.currentUser;
         if (user == null) throw "User not logged in";
@@ -68,17 +77,23 @@ class _BookingWidgetState extends State<BookingWidget> {
         await supabase.from('bookings').insert({
           'user_id': user.id,
           'trip_id': widget.trip['id'],
-          'from_city': widget.fromCity,
-          'to_city': widget.toCity,
+          'from_city': fromCity,
+          'to_city': toCity,
           'seats': bookedSeats,
           'total_price': totalPrice,
           'status': 'booked',
         });
 
         // Update seats in trips table
+        final int currentSeats =
+            (widget.trip['total_seats'] ?? widget.totalSeats) as int;
+        final int newSeats = (currentSeats - bookedSeats).clamp(
+          0,
+          currentSeats,
+        );
         await supabase
             .from('trips')
-            .update({'total_seats': widget.totalSeats - bookedSeats})
+            .update({'total_seats': newSeats})
             .eq('id', widget.trip['id']);
 
         widget.onBookingCompleted();
@@ -96,7 +111,14 @@ class _BookingWidgetState extends State<BookingWidget> {
 
   @override
   Widget build(BuildContext context) {
-    int availableSeats = widget.totalSeats;
+    final int totalSeats =
+        (widget.trip['total_seats'] ?? widget.totalSeats) as int;
+    final int pricePerSeat =
+        (widget.trip['price'] ?? widget.pricePerSeat) as int;
+    final String fromCity =
+        (widget.trip['from_city'] ?? widget.fromCity) as String;
+    final String toCity = (widget.trip['to_city'] ?? widget.toCity) as String;
+    int availableSeats = (totalSeats - bookedSeats).clamp(0, totalSeats);
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -110,7 +132,7 @@ class _BookingWidgetState extends State<BookingWidget> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            "${widget.fromCity} → ${widget.toCity}",
+            "$fromCity → $toCity",
             style: const TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.bold,
@@ -122,7 +144,7 @@ class _BookingWidgetState extends State<BookingWidget> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                "Price per Seat: ${widget.pricePerSeat} PKR",
+                "Price per Seat: $pricePerSeat PKR",
                 style: const TextStyle(fontSize: 16, color: Colors.green),
               ),
               Text(
