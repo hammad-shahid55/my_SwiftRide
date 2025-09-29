@@ -283,13 +283,24 @@ class _BecomeDriverScreenState extends State<BecomeDriverScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Driver Dashboard'),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: const Text(
+          'Driver Dashboard',
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        ),
+        iconTheme: const IconThemeData(color: Colors.white),
         backgroundColor: Colors.transparent,
         flexibleSpace: Container(
           decoration: const BoxDecoration(gradient: AppTheme.mainGradient),
         ),
         actions: [
-          IconButton(icon: const Icon(Icons.refresh), onPressed: _loadData),
+          IconButton(
+            icon: const Icon(Icons.refresh, color: Colors.white),
+            onPressed: _loadData,
+          ),
         ],
       ),
       body:
