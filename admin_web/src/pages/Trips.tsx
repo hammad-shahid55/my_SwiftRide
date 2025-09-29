@@ -2,7 +2,7 @@ import React from "react";
 import { supabase, supabaseConfigured } from "../lib/supabaseClient";
 
 type Trip = {
-  id: string;
+  id: number;
   from_city: string;
   to_city: string;
   depart_time: string;
@@ -21,7 +21,7 @@ export const Trips: React.FC = () => {
     setLoading(true);
     const { data } = await supabase
       .from("trips")
-      .select("*")
+      .select("id, from_city, to_city, depart_time, arrive_time, price, total_seats")
       .order("depart_time");
     setTrips((data as Trip[]) || []);
     setLoading(false);
@@ -125,9 +125,12 @@ const TripDialog: React.FC<{ initial: Partial<Trip>; onClose: () => void }> = ({
   );
 
   const save = async () => {
-    const payload = {
+    const payload: any = {
       from_city,
       to_city,
+      // satisfy required columns "from" and "to" by mirroring city names
+      from: from_city,
+      to: to_city,
       depart_time,
       arrive_time,
       price,
