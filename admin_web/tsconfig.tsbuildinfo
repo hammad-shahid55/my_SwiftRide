@@ -1,0 +1,1 @@
+{"root":["./src/main.tsx","./src/lib/supabaseClient.ts","./src/pages/App.tsx","./src/pages/Dashboard.tsx","./src/pages/Payments.tsx","./src/pages/Trips.tsx","./src/pages/Users.tsx"],"errors":true,"version":"5.9.2"}

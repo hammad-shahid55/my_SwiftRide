@@ -41,6 +41,18 @@ export const App: React.FC = () => {
             >
               Payments
             </Link>
+            <Link
+              style={linkStyle(pathname.startsWith("/drivers"))}
+              to="/drivers"
+            >
+              Drivers
+            </Link>
+            <Link
+              style={linkStyle(pathname.startsWith("/bookings"))}
+              to="/bookings"
+            >
+              Bookings
+            </Link>
           </nav>
         </div>
       </header>
