@@ -5,20 +5,26 @@ type User = {
   id: string;
   full_name?: string;
   email?: string;
-  blocked?: boolean;
 };
 
 export const Users: React.FC = () => {
   const [users, setUsers] = React.useState<User[]>([]);
   const [loading, setLoading] = React.useState(true);
+  const [q, setQ] = React.useState("");
+  const qRef = React.useRef("");
 
   const load = async () => {
     if (!supabaseConfigured) return;
     setLoading(true);
-    const { data } = await supabase
+    let query = supabase
       .from("profiles")
-      .select("*")
-      .order("created_at", { ascending: false });
+      .select("id, full_name, email")
+      .order("updated_at", { ascending: false });
+    const search = qRef.current.trim();
+    if (search) {
+      query = query.or(`full_name.ilike.%${search}%,email.ilike.%${search}%`);
+    }
+    const { data } = await query;
     setUsers((data as User[]) || []);
     setLoading(false);
   };
@@ -26,23 +32,34 @@ export const Users: React.FC = () => {
     load();
   }, []);
 
-  const toggle = async (u: User) => {
-    await supabase
-      .from("profiles")
-      .update({ blocked: !u.blocked })
-      .eq("id", u.id);
-    await load();
-  };
+  React.useEffect(() => {
+    qRef.current = q;
+    const t = setTimeout(() => load(), 300);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [q]);
+
+  // Status/blocked removed as requested
 
   if (!supabaseConfigured) return <>Configure Supabase env to load users.</>;
   if (loading) return <>Loading...</>;
   return (
+    <>
+    <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+      <input
+        placeholder="Search by name or email"
+        value={q}
+        onChange={(e) => setQ(e.target.value)}
+        style={{ flex: 1 }}
+      />
+      <button onClick={() => load()}>Search</button>
+      <button onClick={() => setQ("")}>Clear</button>
+    </div>
     <table className="styled">
       <thead>
         <tr>
           <Th>Name</Th>
           <Th>Email</Th>
-          <Th>Status</Th>
       
         </tr>
       </thead>
@@ -51,16 +68,11 @@ export const Users: React.FC = () => {
           <tr key={u.id}>
             <Td>{u.full_name || "User"}</Td>
             <Td>{u.email || ""}</Td>
-            <Td>{u.blocked ? "Blocked" : "Active"}</Td>
-            <Td>
-              <button className="btn" onClick={() => toggle(u)}>
-                {u.blocked ? "Unblock" : "Block"}
-              </button>
-            </Td>
           </tr>
         ))}
       </tbody>
     </table>
+    </>
   );
 };
 
