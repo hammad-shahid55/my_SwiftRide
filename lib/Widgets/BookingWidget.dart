@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:swift_ride/Screens/HomeScreen.dart';
+import 'package:intl/intl.dart';
+import 'package:timezone/timezone.dart' as tz;
+import 'package:timezone/data/latest_all.dart' as tzdata;
 
 class BookingWidget extends StatefulWidget {
   final int totalSeats;
@@ -28,7 +32,9 @@ class _BookingWidgetState extends State<BookingWidget> {
   final supabase = Supabase.instance.client;
 
   void _increaseSeats() {
-    if (bookedSeats < widget.totalSeats) setState(() => bookedSeats++);
+    final int totalSeats =
+        (widget.trip['total_seats'] ?? widget.totalSeats) as int;
+    if (bookedSeats < totalSeats) setState(() => bookedSeats++);
   }
 
   void _decreaseSeats() {
@@ -36,30 +42,37 @@ class _BookingWidgetState extends State<BookingWidget> {
   }
 
   Future<void> _bookSeats() async {
-    final totalPrice = bookedSeats * widget.pricePerSeat;
+    final int pricePerSeat =
+        (widget.trip['price'] ?? widget.pricePerSeat) as int;
+    final totalPrice = bookedSeats * pricePerSeat;
+    final String fromCity =
+        (widget.trip['from_city'] ?? widget.fromCity) as String;
+    final String toCity = (widget.trip['to_city'] ?? widget.toCity) as String;
 
-    bool confirmed = await showDialog(
-      context: context,
-      builder:
-          (_) => AlertDialog(
-            title: const Text("Confirm Booking"),
-            content: Text(
-              "Seats: $bookedSeats\nPrice: $totalPrice PKR\nFrom: ${widget.fromCity}\nTo: ${widget.toCity}",
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context, false),
-                child: const Text("Cancel"),
+    final bool confirmed =
+        await showDialog<bool>(
+          context: context,
+          builder:
+              (_) => AlertDialog(
+                title: const Text("Confirm Booking"),
+                content: Text(
+                  "Seats: $bookedSeats\nPrice: $totalPrice PKR\nFrom: $fromCity\nTo: $toCity",
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context, false),
+                    child: const Text("Cancel"),
+                  ),
+                  ElevatedButton(
+                    onPressed: () => Navigator.pop(context, true),
+                    child: const Text("Confirm"),
+                  ),
+                ],
               ),
-              ElevatedButton(
-                onPressed: () => Navigator.pop(context, true),
-                child: const Text("Confirm"),
-              ),
-            ],
-          ),
-    );
+        ) ??
+        false;
 
-    if (confirmed != null && confirmed) {
+    if (confirmed) {
       try {
         final user = supabase.auth.currentUser;
         if (user == null) throw "User not logged in";
@@ -68,17 +81,25 @@ class _BookingWidgetState extends State<BookingWidget> {
         await supabase.from('bookings').insert({
           'user_id': user.id,
           'trip_id': widget.trip['id'],
-          'from_city': widget.fromCity,
-          'to_city': widget.toCity,
+          'from_city': fromCity,
+          'to_city': toCity,
           'seats': bookedSeats,
           'total_price': totalPrice,
           'status': 'booked',
+          // Save ride_time at booking time using the trip's scheduled depart_time
+          'ride_time': widget.trip['depart_time'],
         });
 
         // Update seats in trips table
+        final int currentSeats =
+            (widget.trip['total_seats'] ?? widget.totalSeats) as int;
+        final int newSeats = (currentSeats - bookedSeats).clamp(
+          0,
+          currentSeats,
+        );
         await supabase
             .from('trips')
-            .update({'total_seats': widget.totalSeats - bookedSeats})
+            .update({'total_seats': newSeats})
             .eq('id', widget.trip['id']);
 
         widget.onBookingCompleted();
@@ -86,6 +107,14 @@ class _BookingWidgetState extends State<BookingWidget> {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(const SnackBar(content: Text("Booking Successful!")));
+
+        if (mounted) {
+          Navigator.pushAndRemoveUntil(
+            context,
+            MaterialPageRoute(builder: (_) => const HomeScreen()),
+            (route) => false,
+          );
+        }
       } catch (e) {
         ScaffoldMessenger.of(
           context,
@@ -96,7 +125,43 @@ class _BookingWidgetState extends State<BookingWidget> {
 
   @override
   Widget build(BuildContext context) {
-    int availableSeats = widget.totalSeats;
+    final int totalSeats =
+        (widget.trip['total_seats'] ?? widget.totalSeats) as int;
+    final int pricePerSeat =
+        (widget.trip['price'] ?? widget.pricePerSeat) as int;
+    final String fromCity =
+        (widget.trip['from_city'] ?? widget.fromCity) as String;
+    final String toCity = (widget.trip['to_city'] ?? widget.toCity) as String;
+    int availableSeats = (totalSeats - bookedSeats).clamp(0, totalSeats);
+    final String? distanceText = widget.trip['distance_text'] as String?;
+    final String? durationText = widget.trip['duration_text'] as String?;
+    final int? durationMin = widget.trip['duration_min'] as int?;
+    final String derivedDuration =
+        durationText ??
+        (durationMin != null
+            ? (durationMin >= 60
+                ? "${durationMin ~/ 60}h ${durationMin % 60}m"
+                : "${durationMin}m")
+            : "");
+    // Format depart/arrive in PKT (Asia/Karachi)
+    String departStr = '';
+    String arriveStr = '';
+    try {
+      final dynamic departIso = widget.trip['depart_time'];
+      final dynamic arriveIso = widget.trip['arrive_time'];
+      tzdata.initializeTimeZones();
+      final loc = tz.getLocation('Asia/Karachi');
+      if (departIso is String && departIso.isNotEmpty) {
+        final dtUtc = DateTime.parse(departIso).toUtc();
+        final dtPkt = tz.TZDateTime.from(dtUtc, loc);
+        departStr = DateFormat('hh:mm a').format(dtPkt);
+      }
+      if (arriveIso is String && arriveIso.isNotEmpty) {
+        final atUtc = DateTime.parse(arriveIso).toUtc();
+        final atPkt = tz.TZDateTime.from(atUtc, loc);
+        arriveStr = DateFormat('hh:mm a').format(atPkt);
+      }
+    } catch (_) {}
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -110,7 +175,7 @@ class _BookingWidgetState extends State<BookingWidget> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            "${widget.fromCity} → ${widget.toCity}",
+            "$fromCity → $toCity",
             style: const TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.bold,
@@ -122,7 +187,7 @@ class _BookingWidgetState extends State<BookingWidget> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                "Price per Seat: ${widget.pricePerSeat} PKR",
+                "Price per Seat: $pricePerSeat PKR",
                 style: const TextStyle(fontSize: 16, color: Colors.green),
               ),
               Text(
@@ -131,6 +196,59 @@ class _BookingWidgetState extends State<BookingWidget> {
               ),
             ],
           ),
+          if ((distanceText != null && distanceText.isNotEmpty) ||
+              derivedDuration.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                if (distanceText != null && distanceText.isNotEmpty)
+                  Text(
+                    "Distance: $distanceText",
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.deepPurple,
+                    ),
+                  ),
+                if (derivedDuration.isNotEmpty)
+                  Text(
+                    "Duration: $derivedDuration",
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.deepPurple,
+                    ),
+                  ),
+              ],
+            ),
+          ],
+          if (departStr.isNotEmpty || arriveStr.isNotEmpty) ...[
+            const SizedBox(height: 6),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                if (departStr.isNotEmpty)
+                  Text(
+                    "Depart: $departStr",
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.deepPurple,
+                    ),
+                  ),
+                if (arriveStr.isNotEmpty)
+                  Text(
+                    "Arrive: $arriveStr",
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.deepPurple,
+                    ),
+                  ),
+              ],
+            ),
+          ],
           const SizedBox(height: 12),
           Wrap(
             crossAxisAlignment: WrapCrossAlignment.center,

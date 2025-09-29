@@ -9,6 +9,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:flutter/services.dart';
 import 'package:swift_ride/Widgets/BookingWidget.dart';
 import 'package:swift_ride/Widgets/theme.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class DirectionsMapScreen extends StatefulWidget {
   final String fromAddress;
@@ -36,8 +37,8 @@ class _DirectionsMapScreenState extends State<DirectionsMapScreen> {
   BitmapDescriptor? pickupIcon;
   BitmapDescriptor? dropoffIcon;
 
-  final directions = gmw.GoogleMapsDirections(
-    apiKey: 'AIzaSyCMH5gotuF6vrX4z8Ak4JFfDhpyvL43g50',
+  late final gmw.GoogleMapsDirections directions = gmw.GoogleMapsDirections(
+    apiKey: dotenv.env['GOOGLE_MAPS_API_KEY'] ?? '',
   );
 
   @override
@@ -111,7 +112,13 @@ class _DirectionsMapScreenState extends State<DirectionsMapScreen> {
                 points: polylineCoords,
               ),
             );
-            totalDistance = route.legs.first.distance.text ?? "";
+            // Prefer trip card distance when available for consistency
+            final dynamic tripDistance = widget.trip['distance_text'];
+            if (tripDistance is String && tripDistance.isNotEmpty) {
+              totalDistance = tripDistance;
+            } else {
+              totalDistance = route.legs.first.distance.text;
+            }
           });
 
           LatLngBounds bounds = LatLngBounds(

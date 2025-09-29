@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_stripe/flutter_stripe.dart';
 import 'package:http/http.dart' as http;
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:swift_ride/Widgets/theme.dart';
 
 class WalletScreen extends StatefulWidget {
@@ -61,9 +62,8 @@ class _WalletScreenState extends State<WalletScreen> {
       setState(() => isLoading = true);
 
       // ✅ Call Supabase Edge Function for payment
-      final url = Uri.parse(
-        'https://ffsqsalfmwjnauamlobc.supabase.co/functions/v1/create-payment-intent',
-      );
+      final baseUrl = dotenv.env['SUPABASE_URL'] ?? '';
+      final url = Uri.parse('$baseUrl/functions/v1/create-payment-intent');
 
       final response = await http.post(
         url,
