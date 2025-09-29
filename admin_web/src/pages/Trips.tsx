@@ -3,8 +3,10 @@ import { supabase, supabaseConfigured } from "../lib/supabaseClient";
 
 type Trip = {
   id: number;
-  from_city: string;
-  to_city: string;
+  from_city?: string;
+  to_city?: string;
+  from: string;
+  to: string;
   depart_time: string;
   arrive_time: string;
   price: number;
@@ -21,8 +23,9 @@ export const Trips: React.FC = () => {
     setLoading(true);
     const { data } = await supabase
       .from("trips")
-      .select("id, from_city, to_city, depart_time, arrive_time, price, total_seats")
-      .order("depart_time");
+      .select("id, from_city, to_city, from, to, depart_time, arrive_time, price, total_seats")
+      .gte('depart_time', new Date().toISOString())
+      .order("depart_time", { ascending: true });
     setTrips((data as Trip[]) || []);
     setLoading(false);
   };
@@ -63,6 +66,8 @@ export const Trips: React.FC = () => {
         <table className="styled">
           <thead>
             <tr>
+              <Th>From City</Th>
+              <Th>To City</Th>
               <Th>From</Th>
               <Th>To</Th>
               <Th>Depart</Th>
@@ -76,8 +81,10 @@ export const Trips: React.FC = () => {
           <tbody>
             {trips.map((t) => (
               <tr key={t.id}>
-                <Td>{t.from_city}</Td>
-                <Td>{t.to_city}</Td>
+                <Td>{t.from_city || ''}</Td>
+                <Td>{t.to_city || ''}</Td>
+                <Td>{t.from}</Td>
+                <Td>{t.to}</Td>
                 <Td>{t.depart_time}</Td>
                 <Td>{t.arrive_time}</Td>
                 <Td>{t.price}</Td>
@@ -115,8 +122,10 @@ const TripDialog: React.FC<{ initial: Partial<Trip>; onClose: () => void }> = ({
   initial,
   onClose,
 }) => {
-  const [from_city, setFrom] = React.useState(initial.from_city || "");
-  const [to_city, setTo] = React.useState(initial.to_city || "");
+  const [from_city, setFromCity] = React.useState(initial.from_city || "");
+  const [to_city, setToCity] = React.useState(initial.to_city || "");
+  const [fromVal, setFrom] = React.useState(initial.from || "");
+  const [toVal, setTo] = React.useState(initial.to || "");
   const [depart_time, setDepart] = React.useState(initial.depart_time || "");
   const [arrive_time, setArrive] = React.useState(initial.arrive_time || "");
   const [price, setPrice] = React.useState<number>(Number(initial.price || 0));
@@ -128,9 +137,8 @@ const TripDialog: React.FC<{ initial: Partial<Trip>; onClose: () => void }> = ({
     const payload: any = {
       from_city,
       to_city,
-      // satisfy required columns "from" and "to" by mirroring city names
-      from: from_city,
-      to: to_city,
+      from: fromVal,
+      to: toVal,
       depart_time,
       arrive_time,
       price,
@@ -150,13 +158,23 @@ const TripDialog: React.FC<{ initial: Partial<Trip>; onClose: () => void }> = ({
         <h3>{initial.id ? "Edit Trip" : "Create Trip"}</h3>
         <div style={{ display: "grid", gap: 8 }}>
           <input
-            placeholder="From"
+            placeholder="From City"
             value={from_city}
+            onChange={(e) => setFromCity(e.target.value)}
+          />
+          <input
+            placeholder="To City"
+            value={to_city}
+            onChange={(e) => setToCity(e.target.value)}
+          />
+          <input
+            placeholder="From"
+            value={fromVal}
             onChange={(e) => setFrom(e.target.value)}
           />
           <input
             placeholder="To"
-            value={to_city}
+            value={toVal}
             onChange={(e) => setTo(e.target.value)}
           />
           <input
