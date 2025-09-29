@@ -6,20 +6,28 @@ export const Dashboard: React.FC = () => {
     trips: 0,
     users: 0,
     payments: 0,
+    payers: 0,
   });
 
   React.useEffect(() => {
     if (!supabaseConfigured) return;
     (async () => {
-      const [trips, users, payments] = await Promise.all([
-        supabase.from("trips").select("*"),
-        supabase.from("profiles").select("*"),
-        supabase.from("payments").select("*"),
+      const [trips, users, payments, payers] = await Promise.all([
+        supabase.from("trips").select("*", { count: "exact", head: true }),
+        supabase.from("profiles").select("*", { count: "exact", head: true }),
+        supabase.from("payments").select("*", { count: "exact", head: true }),
+        // distinct count of users who have added to wallet
+        supabase
+          .from("profiles")
+          .select("id", { count: "exact" })
+          .gt("wallet_balance", 0)
+          .neq("email", null),
       ]);
       setCounts({
-        trips: trips.data?.length || 0,
-        users: users.data?.length || 0,
-        payments: payments.data?.length || 0,
+        trips: trips.count || 0,
+        users: users.count || 0,
+        payments: payments.count || 0,
+        payers: payers.count || 0,
       });
     })();
   }, []);
@@ -53,6 +61,7 @@ VITE_SUPABASE_ANON_KEY`}
         <Stat title="Trips" value={counts.trips} />
         <Stat title="Users" value={counts.users} />
         <Stat title="Payments" value={counts.payments} />
+        <Stat title="Users with wallet > 0" value={counts.payers} />
       </div>
       <div className="card">
         <div className="stat-title" style={{ marginBottom: 8 }}>
