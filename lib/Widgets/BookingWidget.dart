@@ -85,6 +85,8 @@ class _BookingWidgetState extends State<BookingWidget> {
           'seats': bookedSeats,
           'total_price': totalPrice,
           'status': 'booked',
+          // Save ride_time at booking time using the trip's scheduled depart_time
+          'ride_time': widget.trip['depart_time'],
         });
 
         // Update seats in trips table
