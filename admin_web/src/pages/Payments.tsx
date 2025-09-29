@@ -32,7 +32,7 @@ export const Payments: React.FC = () => {
   if (!supabaseConfigured) return <>Configure Supabase env to load payments.</>;
   if (loading) return <>Loading...</>;
   return (
-    <table style={{ width: "100%", borderCollapse: "collapse" }}>
+    <table className="styled">
       <thead>
         <tr>
           <Th>Amount</Th>
@@ -47,7 +47,9 @@ export const Payments: React.FC = () => {
             <Td>{p.status ?? ""}</Td>
             <Td>
               {String(p.status).toLowerCase() === "succeeded" && (
-                <button onClick={() => refund(p)}>Refund</button>
+                <button className="btn" onClick={() => refund(p)}>
+                  Refund
+                </button>
               )}
             </Td>
           </tr>

@@ -1,0 +1,105 @@
+:root {
+  --gradient-start: #4c1d95; /* deep purple */
+  --gradient-end: #7c3aed;   /* violet */
+  --bg: #0f172a;             /* slate-900 */
+  --surface: #111827;        /* gray-900 */
+  --muted: #9ca3af;          /* gray-400 */
+  --text: #e5e7eb;           /* gray-200 */
+  --accent: #22d3ee;         /* cyan-400 */
+}
+
+html, body, #root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+  background:
+    radial-gradient(1200px 600px at 10% -10%, rgba(124,58,237,0.25), transparent 60%),
+    radial-gradient(1000px 500px at 110% 10%, rgba(76,29,149,0.25), transparent 60%),
+    linear-gradient(180deg, #0b1023, #0a0f1f);
+  color: var(--text);
+}
+
+.gradient-header {
+  background: linear-gradient(135deg, var(--gradient-start), var(--gradient-end));
+  color: white;
+}
+
+.sidebar {
+  width: 240px;
+  background: linear-gradient(180deg, #17123a, #120e2e 60%, #0d0a23);
+  color: var(--text);
+  border-right: 1px solid rgba(255,255,255,0.06);
+}
+
+.sidebar a {
+  color: var(--text);
+}
+
+.container {
+  max-width: 1280px;
+  margin: 0 auto;
+}
+
+.card {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 10px 20px rgba(0,0,0,0.25);
+}
+
+.stat {
+  display: grid;
+  gap: 4px;
+}
+
+.stat-title {
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.stat-value {
+  font-size: 28px;
+  font-weight: 800;
+  background: linear-gradient(135deg, var(--gradient-start), var(--gradient-end));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+table.styled {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+table.styled th, table.styled td {
+  padding: 10px 12px;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+
+table.styled thead th {
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.btn {
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,0.1);
+  background: rgba(255,255,255,0.03);
+  color: var(--text);
+  cursor: pointer;
+}
+
+.btn.primary {
+  border: none;
+  background: linear-gradient(135deg, var(--gradient-start), var(--gradient-end));
+}
+
+.empty {
+  color: var(--muted);
+}
+

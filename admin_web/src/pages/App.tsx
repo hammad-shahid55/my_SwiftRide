@@ -4,45 +4,51 @@ import { Link, Outlet, useLocation } from "react-router-dom";
 export const App: React.FC = () => {
   const { pathname } = useLocation();
   return (
-    <div style={{ display: "flex", minHeight: "100vh" }}>
-      <nav
+    <div
+      style={{
+        display: "grid",
+        gridTemplateRows: "56px 1fr",
+        minHeight: "100vh",
+      }}
+    >
+      <header
+        className="gradient-header"
         style={{
-          width: 220,
-          background: "#2e1065",
-          color: "white",
-          padding: 16,
+          display: "flex",
+          alignItems: "center",
+          padding: "0 20px",
+          borderBottom: "1px solid rgba(255,255,255,0.08)",
         }}
       >
-        <h3 style={{ marginTop: 0 }}>Swift Ride Admin</h3>
-        <ul style={{ listStyle: "none", padding: 0 }}>
-          <li>
+        <div
+          className="container"
+          style={{ display: "flex", alignItems: "center", gap: 16 }}
+        >
+          <div style={{ fontWeight: 800 }}>Swift Ride Admin</div>
+          <nav style={{ display: "flex", gap: 16 }}>
             <Link style={linkStyle(pathname === "/")} to="/">
               Dashboard
             </Link>
-          </li>
-          <li>
             <Link style={linkStyle(pathname.startsWith("/trips"))} to="/trips">
               Trips
             </Link>
-          </li>
-          <li>
             <Link style={linkStyle(pathname.startsWith("/users"))} to="/users">
               Users
             </Link>
-          </li>
-          <li>
             <Link
               style={linkStyle(pathname.startsWith("/payments"))}
               to="/payments"
             >
               Payments
             </Link>
-          </li>
-        </ul>
-      </nav>
-      <main style={{ flex: 1, padding: 24 }}>
-        <Outlet />
-      </main>
+          </nav>
+        </div>
+      </header>
+      <div className="container" style={{ width: "100%", padding: 20 }}>
+        <div className="card" style={{ padding: 20 }}>
+          <Outlet />
+        </div>
+      </div>
     </div>
   );
 };

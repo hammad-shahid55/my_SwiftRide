@@ -37,7 +37,7 @@ export const Users: React.FC = () => {
   if (!supabaseConfigured) return <>Configure Supabase env to load users.</>;
   if (loading) return <>Loading...</>;
   return (
-    <table style={{ width: "100%", borderCollapse: "collapse" }}>
+    <table className="styled">
       <thead>
         <tr>
           <Th>Name</Th>
@@ -53,7 +53,7 @@ export const Users: React.FC = () => {
             <Td>{u.email || ""}</Td>
             <Td>{u.blocked ? "Blocked" : "Active"}</Td>
             <Td>
-              <button onClick={() => toggle(u)}>
+              <button className="btn" onClick={() => toggle(u)}>
                 {u.blocked ? "Unblock" : "Block"}
               </button>
             </Td>

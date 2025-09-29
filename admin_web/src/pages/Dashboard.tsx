@@ -42,23 +42,31 @@ VITE_SUPABASE_ANON_KEY=YOUR_ANON_KEY`}
   }
 
   return (
-    <div
-      style={{
-        display: "grid",
-        gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-        gap: 16,
-      }}
-    >
-      <Stat title="Trips" value={counts.trips} />
-      <Stat title="Users" value={counts.users} />
-      <Stat title="Payments" value={counts.payments} />
+    <div style={{ display: "grid", gap: 16 }}>
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+          gap: 16,
+        }}
+      >
+        <Stat title="Trips" value={counts.trips} />
+        <Stat title="Users" value={counts.users} />
+        <Stat title="Payments" value={counts.payments} />
+      </div>
+      <div className="card">
+        <div className="stat-title" style={{ marginBottom: 8 }}>
+          Recent activity
+        </div>
+        <div className="empty">No recent activity yet.</div>
+      </div>
     </div>
   );
 };
 
 const Stat: React.FC<{ title: string; value: number }> = ({ title, value }) => (
-  <div style={{ border: "1px solid #e5e7eb", borderRadius: 8, padding: 16 }}>
-    <div style={{ fontWeight: 700 }}>{title}</div>
-    <div style={{ fontSize: 28, color: "#5b21b6" }}>{value}</div>
+  <div className="card stat">
+    <div className="stat-title">{title}</div>
+    <div className="stat-value">{value}</div>
   </div>
 );

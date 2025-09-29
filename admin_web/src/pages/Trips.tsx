@@ -42,6 +42,7 @@ export const Trips: React.FC = () => {
   return (
     <div>
       <button
+        className="btn primary"
         onClick={() => setEditing({} as Trip)}
         style={{ marginBottom: 12 }}
       >
@@ -59,7 +60,7 @@ export const Trips: React.FC = () => {
       {loading ? (
         "Loading..."
       ) : (
-        <table style={{ width: "100%", borderCollapse: "collapse" }}>
+        <table className="styled">
           <thead>
             <tr>
               <Th>From</Th>
