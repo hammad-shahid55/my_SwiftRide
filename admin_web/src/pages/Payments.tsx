@@ -6,6 +6,7 @@ type Payment = { id: string; amount?: number; status?: string };
 export const Payments: React.FC = () => {
   const [payments, setPayments] = React.useState<Payment[]>([]);
   const [loading, setLoading] = React.useState(true);
+  const [totalWalletProfiles, setTotalWalletProfiles] = React.useState<number>(0);
 
   const load = async () => {
     if (!supabaseConfigured) return;
@@ -15,6 +16,13 @@ export const Payments: React.FC = () => {
       .select("*")
       .order("created_at", { ascending: false });
     setPayments((data as Payment[]) || []);
+
+    // Sum via view (wallet_total_view)
+    const { data: totalRow } = await supabase
+      .from("wallet_total_view")
+      .select("total")
+      .maybeSingle();
+    setTotalWalletProfiles(Number(totalRow?.total ?? 0));
     setLoading(false);
   };
   React.useEffect(() => {
@@ -32,6 +40,10 @@ export const Payments: React.FC = () => {
   if (!supabaseConfigured) return <>Configure Supabase env to load payments.</>;
   if (loading) return <>Loading...</>;
   return (
+    <>
+    <div style={{ marginBottom: 12, fontWeight: 700 }}>
+      Total Wallet (profiles.wallet_balance): {totalWalletProfiles}
+    </div>
     <table className="styled">
       <thead>
         <tr>
@@ -56,6 +68,7 @@ export const Payments: React.FC = () => {
         ))}
       </tbody>
     </table>
+    </>
   );
 };
 
