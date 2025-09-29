@@ -34,7 +34,7 @@ export const Dashboard: React.FC = () => {
               ? "https://ffsqsalfmwjnauamlobc.supabase.co"
               : ""
           }
-VITE_SUPABASE_ANON_KEY=YOUR_ANON_KEY`}
+VITE_SUPABASE_ANON_KEY`}
         </pre>
         Then restart dev server.
       </div>

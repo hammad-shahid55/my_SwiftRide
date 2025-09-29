@@ -69,7 +69,7 @@ export const Trips: React.FC = () => {
               <Th>Arrive</Th>
               <Th>Price</Th>
               <Th>Seats</Th>
-              <Th></Th>
+            
             </tr>
           </thead>
           <tbody>

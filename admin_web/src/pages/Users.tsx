@@ -43,7 +43,7 @@ export const Users: React.FC = () => {
           <Th>Name</Th>
           <Th>Email</Th>
           <Th>Status</Th>
-          <Th></Th>
+      
         </tr>
       </thead>
       <tbody>
