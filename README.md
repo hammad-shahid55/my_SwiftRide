@@ -361,3 +361,116 @@ create index if not exists trips_route_time_idx on public.trips(from_city, to_ci
 - Enable RLS on all tables; restrict reads/writes by `auth.uid()` where appropriate.
 - Use Edge Functions or Postgres RPCs for sensitive operations (payments, wallet mutation).
 
+## Admin Web (overview)
+
+Note: The `admin_web` folder is currently removed. This section documents the intended Admin Web app so you can recreate it quickly and connect to the same Supabase backend as the Flutter app.
+
+### Stack
+- React + TypeScript + Vite
+- `@supabase/supabase-js` client
+
+### Environment
+- Create `admin_web/.env` with:
+```
+VITE_SUPABASE_URL=your_supabase_url
+VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+```
+
+### Client creation (example)
+```ts
+import { createClient } from '@supabase/supabase-js';
+const client = createClient(import.meta.env.VITE_SUPABASE_URL!, import.meta.env.VITE_SUPABASE_ANON_KEY!);
+```
+
+### Routing/pages (intended)
+- Dashboard: overall KPIs
+- Trips: list trips, create/edit/delete. Supports search by `from_city`/`to_city` and sort by `depart_time`.
+  - Insert adds a row to Supabase `trips` table used by the Flutter app.
+  - Search: `or(from_city.ilike.%q%,to_city.ilike.%q%)` with debounce.
+- Drivers: manage driver records
+- DriverDetail: view a specific driver by id
+- Users: manage end users
+- Payments: monitor and reconcile wallet top-ups
+- Bookings: manage customer bookings
+
+### Data contract shared with Flutter
+- Writes to and reads from the same `trips`, `bookings`, and auxiliary tables described above. Creating a trip in Admin makes it visible in the app’s `TripSelectionScreen` immediately.
+
+---
+
+## Full Screen Reference (Flutter)
+
+Below is a concise inventory of all screens under `lib/Screens` with their role and key logic. Use this as a map to the codebase.
+
+- `AccountActionsScreen.dart`
+  - Entry to account-related flows (profile, password, logout shortcuts).
+
+- `BecomeDriverScreen.dart`
+  - Driver onboarding entry. Typically collects driver info/documents before enabling driver features.
+
+- `ContactUsScreen.dart`
+  - Static contact/help information, potentially with mail/tap-to-call actions.
+
+- `DirectionsMapScreen.dart`
+  - Renders Google Map route between selected addresses.
+  - Geocodes addresses, fetches Google Directions, decodes polylines, shows pickup/dropoff markers.
+  - Overlays `BookingWidget` to proceed with booking/payment.
+
+- `EnableLocationScreen.dart`
+  - Guides user to enable location services and grant permissions (uses `geolocator`).
+
+- `ForgotPasswordScreen.dart`
+  - Password reset flow via Supabase auth (email-based in typical setups).
+
+- `HistoryScreen.dart`
+  - Displays user’s past rides; reads from `bookings` where `status = 'completed'`.
+
+- `HomeScreen.dart`
+  - Loads `profiles.name`, recent `location_history`, and completed `bookings` via Supabase.
+  - Quick address entry opens `LocationSelectionScreen`; chips for recent history provide shortcuts.
+  - Handles logout and drawer-driven navigation.
+
+- `LocationSelectionScreen.dart`
+  - Search/address entry UI. On selection, persists into `location_history` (dedupe + timestamp bump).
+
+- `OnBoardingScreen.dart`
+  - First-time experience; set by `SplashScreen` using a `SharedPreferences` flag.
+
+- `PhoneNumberSignUpScreen.dart`
+  - Phone-number-based registration UX (UI scaffolding; wire to Supabase OTP if required).
+
+- `PrivacyPolicyScreen.dart`
+  - Static legal content display.
+
+- `SetLocationMapScreen.dart`
+  - Map-based picker allowing the user to select/set a location.
+
+- `SettingsScreen.dart`
+  - App preferences; could include theme, notifications, and privacy.
+
+- `SignInScreen.dart`
+  - User login UI wired to Supabase auth.
+
+- `SignUpScreen.dart`
+  - Registration UI wired to Supabase auth.
+
+- `SplashScreen.dart`
+  - Animated splash. Connectivity check, first-run detection, auth-state check, and location permission routing.
+
+- `TermsAndConditionsScreen.dart`
+  - Static legal content display.
+
+- `TripSelectionScreen.dart`
+  - Fetches `trips` for both directions (A→B and B→A), grouped for the next 7 days.
+  - For Today, filters out departures earlier than now; formats times; shows price, seats, distance/duration fields if provided.
+  - Navigates to `DirectionsMapScreen` with selected trip.
+
+- `UserProfileScreen.dart`
+  - Shows and edits user profile info stored in `profiles`.
+
+- `WalletScreen.dart`
+  - Stripe PaymentSheet top-up; on success, calls Supabase RPC to increment wallet and refreshes balance.
+
+- `WelcomeScreen.dart`
+  - Landing for unauthenticated users; routes to sign-in or location permission flow as needed.
+
