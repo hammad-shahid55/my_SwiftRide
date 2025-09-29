@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:swift_ride/Screens/HomeScreen.dart';
 import 'package:intl/intl.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'package:timezone/data/latest_all.dart' as tzdata;
@@ -106,6 +107,14 @@ class _BookingWidgetState extends State<BookingWidget> {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(const SnackBar(content: Text("Booking Successful!")));
+
+        if (mounted) {
+          Navigator.pushAndRemoveUntil(
+            context,
+            MaterialPageRoute(builder: (_) => const HomeScreen()),
+            (route) => false,
+          );
+        }
       } catch (e) {
         ScaffoldMessenger.of(
           context,

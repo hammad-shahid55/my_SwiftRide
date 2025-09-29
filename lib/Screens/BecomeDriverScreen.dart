@@ -21,6 +21,7 @@ class _BecomeDriverScreenState extends State<BecomeDriverScreen> {
   bool hasDriverProfile = false;
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _phoneController = TextEditingController();
+  Map<int, Map<String, int>> tripIdToBookingStatusCounts = {};
 
   final List<Map<String, dynamic>> vans = List.generate(
     10,
@@ -71,8 +72,9 @@ class _BecomeDriverScreenState extends State<BecomeDriverScreen> {
           .order('depart_time', ascending: true)
           .limit(30);
 
-      // For each trip, sum booked seats
+      // For each trip, sum booked seats and status counts
       final Map<int, int> seatTotals = {};
+      final Map<int, Map<String, int>> statusCounts = {};
       for (final t in fetchedTrips) {
         final int tripId = t['id'] as int;
         final bookings = await supabase
@@ -80,15 +82,25 @@ class _BecomeDriverScreenState extends State<BecomeDriverScreen> {
             .select('seats, status, ride_time')
             .eq('trip_id', tripId);
         int total = 0;
+        int bookedCount = 0;
+        int completedCount = 0;
         for (final b in bookings) {
           total += (b['seats'] ?? 0) as int;
+          final s = (b['status'] ?? '').toString();
+          if (s == 'completed') completedCount += 1;
+          if (s == 'booked') bookedCount += 1;
         }
         seatTotals[tripId] = total;
+        statusCounts[tripId] = {
+          'booked': bookedCount,
+          'completed': completedCount,
+        };
       }
 
       setState(() {
         trips = List<Map<String, dynamic>>.from(fetchedTrips);
         tripIdToBookedSeats = seatTotals;
+        tripIdToBookingStatusCounts = statusCounts;
         isLoading = false;
       });
     } catch (e) {
@@ -415,6 +427,9 @@ class _BecomeDriverScreenState extends State<BecomeDriverScreen> {
                                         (trip['van_id'] is int)
                                             ? trip['van_id'] as int
                                             : null;
+                                    final Map<String, int> counts =
+                                        tripIdToBookingStatusCounts[trip['id']] ??
+                                        const {'booked': 0, 'completed': 0};
 
                                     return Card(
                                       margin: const EdgeInsets.symmetric(
@@ -567,6 +582,41 @@ class _BecomeDriverScreenState extends State<BecomeDriverScreen> {
                                                 const SizedBox(width: 10),
                                                 Text(
                                                   '$booked/$totalSeats booked',
+                                                ),
+                                              ],
+                                            ),
+                                            const SizedBox(height: 6),
+                                            Row(
+                                              children: [
+                                                Chip(
+                                                  avatar: const Icon(
+                                                    Icons.schedule,
+                                                    size: 16,
+                                                    color: Colors.white,
+                                                  ),
+                                                  label: Text(
+                                                    'Booked: ${counts['booked'] ?? 0}',
+                                                  ),
+                                                  labelStyle: const TextStyle(
+                                                    color: Colors.white,
+                                                  ),
+                                                  backgroundColor:
+                                                      Colors.orange,
+                                                ),
+                                                const SizedBox(width: 6),
+                                                Chip(
+                                                  avatar: const Icon(
+                                                    Icons.check_circle,
+                                                    size: 16,
+                                                    color: Colors.white,
+                                                  ),
+                                                  label: Text(
+                                                    'Completed: ${counts['completed'] ?? 0}',
+                                                  ),
+                                                  labelStyle: const TextStyle(
+                                                    color: Colors.white,
+                                                  ),
+                                                  backgroundColor: Colors.green,
                                                 ),
                                               ],
                                             ),
