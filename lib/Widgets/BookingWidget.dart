@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:intl/intl.dart';
+import 'package:timezone/timezone.dart' as tz;
+import 'package:timezone/data/latest_all.dart' as tzdata;
 
 class BookingWidget extends StatefulWidget {
   final int totalSeats;
@@ -119,6 +122,35 @@ class _BookingWidgetState extends State<BookingWidget> {
         (widget.trip['from_city'] ?? widget.fromCity) as String;
     final String toCity = (widget.trip['to_city'] ?? widget.toCity) as String;
     int availableSeats = (totalSeats - bookedSeats).clamp(0, totalSeats);
+    final String? distanceText = widget.trip['distance_text'] as String?;
+    final String? durationText = widget.trip['duration_text'] as String?;
+    final int? durationMin = widget.trip['duration_min'] as int?;
+    final String derivedDuration =
+        durationText ??
+        (durationMin != null
+            ? (durationMin >= 60
+                ? "${durationMin ~/ 60}h ${durationMin % 60}m"
+                : "${durationMin}m")
+            : "");
+    // Format depart/arrive in PKT (Asia/Karachi)
+    String departStr = '';
+    String arriveStr = '';
+    try {
+      final dynamic departIso = widget.trip['depart_time'];
+      final dynamic arriveIso = widget.trip['arrive_time'];
+      tzdata.initializeTimeZones();
+      final loc = tz.getLocation('Asia/Karachi');
+      if (departIso is String && departIso.isNotEmpty) {
+        final dtUtc = DateTime.parse(departIso).toUtc();
+        final dtPkt = tz.TZDateTime.from(dtUtc, loc);
+        departStr = DateFormat('hh:mm a').format(dtPkt);
+      }
+      if (arriveIso is String && arriveIso.isNotEmpty) {
+        final atUtc = DateTime.parse(arriveIso).toUtc();
+        final atPkt = tz.TZDateTime.from(atUtc, loc);
+        arriveStr = DateFormat('hh:mm a').format(atPkt);
+      }
+    } catch (_) {}
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -153,6 +185,59 @@ class _BookingWidgetState extends State<BookingWidget> {
               ),
             ],
           ),
+          if ((distanceText != null && distanceText.isNotEmpty) ||
+              derivedDuration.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                if (distanceText != null && distanceText.isNotEmpty)
+                  Text(
+                    "Distance: $distanceText",
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.deepPurple,
+                    ),
+                  ),
+                if (derivedDuration.isNotEmpty)
+                  Text(
+                    "Duration: $derivedDuration",
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.deepPurple,
+                    ),
+                  ),
+              ],
+            ),
+          ],
+          if (departStr.isNotEmpty || arriveStr.isNotEmpty) ...[
+            const SizedBox(height: 6),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                if (departStr.isNotEmpty)
+                  Text(
+                    "Depart: $departStr",
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.deepPurple,
+                    ),
+                  ),
+                if (arriveStr.isNotEmpty)
+                  Text(
+                    "Arrive: $arriveStr",
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.deepPurple,
+                    ),
+                  ),
+              ],
+            ),
+          ],
           const SizedBox(height: 12),
           Wrap(
             crossAxisAlignment: WrapCrossAlignment.center,

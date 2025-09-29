@@ -111,7 +111,13 @@ class _DirectionsMapScreenState extends State<DirectionsMapScreen> {
                 points: polylineCoords,
               ),
             );
-            totalDistance = route.legs.first.distance.text ?? "";
+            // Prefer trip card distance when available for consistency
+            final dynamic tripDistance = widget.trip['distance_text'];
+            if (tripDistance is String && tripDistance.isNotEmpty) {
+              totalDistance = tripDistance;
+            } else {
+              totalDistance = route.legs.first.distance.text;
+            }
           });
 
           LatLngBounds bounds = LatLngBounds(
