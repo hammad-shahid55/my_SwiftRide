@@ -58,6 +58,7 @@ export const Payments: React.FC = () => {
         <tr>
           <Th>Amount</Th>
           <Th>Status</Th>
+          <Th></Th>
         
         </tr>
       </thead>

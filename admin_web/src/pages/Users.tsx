@@ -60,6 +60,7 @@ export const Users: React.FC = () => {
         <tr>
           <Th>Name</Th>
           <Th>Email</Th>
+          <Th></Th>
       
         </tr>
       </thead>
