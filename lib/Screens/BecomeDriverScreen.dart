@@ -430,7 +430,8 @@ class _BecomeDriverScreenState extends State<BecomeDriverScreen> {
                                                   Text(
                                                     '${van['plate']}',
                                                     style: TextStyle(
-                                                      color: Colors.grey.shade600,
+                                                      color:
+                                                          Colors.grey.shade600,
                                                       fontSize: 13,
                                                     ),
                                                   ),
