@@ -25,7 +25,12 @@ class _BecomeDriverScreenState extends State<BecomeDriverScreen> {
 
   final List<Map<String, dynamic>> vans = List.generate(
     10,
-    (i) => {'id': i + 1, 'name': 'Van ${i + 1}', 'seats': 14},
+    (i) => {
+      'id': i + 1,
+      'name': 'Van ${i + 1}',
+      'seats': 14,
+      'plate': 'LXR-${1000 + i}',
+    },
   );
 
   @override
@@ -420,6 +425,13 @@ class _BecomeDriverScreenState extends State<BecomeDriverScreen> {
                                                     style: const TextStyle(
                                                       fontWeight:
                                                           FontWeight.bold,
+                                                    ),
+                                                  ),
+                                                  Text(
+                                                    '${van['plate']}',
+                                                    style: TextStyle(
+                                                      color: Colors.grey.shade600,
+                                                      fontSize: 13,
                                                     ),
                                                   ),
                                                   Text(
