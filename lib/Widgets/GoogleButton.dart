@@ -12,21 +12,14 @@ class GoogleButton extends StatelessWidget {
       height: 50,
       child: DecoratedBox(
         decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            colors: [
-              Color(0xFF5500FF), // left color
-              Color(0xFFFB7B7B), // right color
-            ],
-            begin: Alignment.centerLeft,
-            end: Alignment.centerRight,
-          ),
+          color: Colors.white, // Changed to white background
           borderRadius: BorderRadius.circular(12),
         ),
         child: ElevatedButton.icon(
           style: ElevatedButton.styleFrom(
             backgroundColor: Colors.transparent,
             shadowColor: Colors.transparent,
-            foregroundColor: Colors.white,
+            foregroundColor: Colors.black, // Adjusted text color for contrast
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
             ),
@@ -38,7 +31,7 @@ class GoogleButton extends StatelessWidget {
               'assets/google_logo.png',
               width: 24,
               height: 24,
-              color: Colors.white, // make icon visible on gradient
+              // Removed color overlay to use the original asset colors
             ),
           ),
           label: const Text(
@@ -47,7 +40,7 @@ class GoogleButton extends StatelessWidget {
               fontFamily: 'Urbanist',
               fontWeight: FontWeight.w700,
               fontSize: 16,
-              color: Colors.white,
+              color: Colors.black, // Adjusted text color for contrast
             ),
           ),
           onPressed: onPressed,

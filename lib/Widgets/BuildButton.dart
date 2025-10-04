@@ -19,34 +19,27 @@ class BuildButton extends StatelessWidget {
       height: 50,
       child: DecoratedBox(
         decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            colors: [
-              Color(0xFF5500FF), // left color
-              Color(0xFFFB7B7B), // right color
-            ],
-            begin: Alignment.centerLeft,
-            end: Alignment.centerRight,
-          ),
+          color: Colors.white,
           borderRadius: BorderRadius.circular(12),
         ),
         child: ElevatedButton.icon(
           style: ElevatedButton.styleFrom(
             backgroundColor: Colors.transparent,
             shadowColor: Colors.transparent,
-            foregroundColor: Colors.white,
+            foregroundColor: Colors.black,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
             ),
             padding: const EdgeInsets.symmetric(vertical: 12),
           ),
-          icon: Icon(icon, color: Colors.white, size: 20),
+          icon: Icon(icon, color: Colors.black, size: 20),
           label: Text(
             text,
             style: const TextStyle(
               fontFamily: 'Urbanist',
               fontWeight: FontWeight.w700,
               fontSize: 16,
-              color: Colors.white,
+              color: Colors.black,
             ),
           ),
           onPressed: onPressed,
