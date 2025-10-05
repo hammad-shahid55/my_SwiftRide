@@ -21,6 +21,7 @@ class _HomeScreenState extends State<HomeScreen> {
   List<Map<String, dynamic>> recentLocations = [];
   List<Map<String, dynamic>> completedRides = [];
   bool showAllHistory = false;
+  bool showCompletedCards = true;
 
   DateTime? lastBackPressTime;
 
@@ -146,6 +147,12 @@ class _HomeScreenState extends State<HomeScreen> {
       showAllHistory = !showAllHistory;
     });
     await fetchRecentLocations();
+  }
+
+  void toggleCompletedView() {
+    setState(() {
+      showCompletedCards = !showCompletedCards;
+    });
   }
 
   void navigateToLocationSelection({String? prefill}) async {
@@ -339,9 +346,9 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     ),
                     GestureDetector(
-                      onTap: toggleHistoryView,
+                      onTap: toggleCompletedView,
                       child: Text(
-                        showAllHistory ? 'HIDE ALL' : 'VIEW ALL',
+                        showCompletedCards ? 'HIDE' : 'VIEW',
                         style: const TextStyle(
                           color: Colors.blue,
                           fontWeight: FontWeight.bold,
@@ -351,7 +358,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   ],
                 ),
                 const SizedBox(height: 8),
-                if (completedRides.isNotEmpty)
+                if (showCompletedCards && completedRides.isNotEmpty)
                   Column(
                     children:
                         completedRides.map((ride) {
