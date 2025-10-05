@@ -332,7 +332,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     const Text(
-                      'All lines',
+                      'Past ride history',
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 18,
@@ -374,9 +374,9 @@ class _HomeScreenState extends State<HomeScreen> {
                                 children: [
                                   Text("Seats: ${ride['seats']}"),
                                   Text("Total: ${ride['total_price']} PKR"),
-                                  Text(
-                                    "Status: ${ride['status']}",
-                                    style: const TextStyle(
+                                  const Text(
+                                    "Status: completed",
+                                    style: TextStyle(
                                       color: Colors.blue,
                                       fontWeight: FontWeight.bold,
                                     ),
