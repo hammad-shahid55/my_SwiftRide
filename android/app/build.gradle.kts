@@ -34,7 +34,7 @@ android {
 
     defaultConfig {
         applicationId = "com.example.swift_ride"
-        minSdk = 21
+        minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutterVersionCode.toInt()
         versionName = flutterVersionName

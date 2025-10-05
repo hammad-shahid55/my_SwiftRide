@@ -132,6 +132,8 @@ class _BookingWidgetState extends State<BookingWidget> {
     final String fromCity =
         (widget.trip['from_city'] ?? widget.fromCity) as String;
     final String toCity = (widget.trip['to_city'] ?? widget.toCity) as String;
+    final String? fromAddress = widget.trip['from'] as String?;
+    final String? toAddress = widget.trip['to'] as String?;
     int availableSeats = (totalSeats - bookedSeats).clamp(0, totalSeats);
     final String? distanceText = widget.trip['distance_text'] as String?;
     final String? durationText = widget.trip['duration_text'] as String?;
@@ -182,6 +184,26 @@ class _BookingWidgetState extends State<BookingWidget> {
               color: Colors.deepPurple,
             ),
           ),
+          if ((fromAddress != null && fromAddress.isNotEmpty) ||
+              (toAddress != null && toAddress.isNotEmpty)) ...[
+            const SizedBox(height: 6),
+            if (fromAddress != null && fromAddress.isNotEmpty)
+              Text(
+                "From: $fromAddress",
+                style: const TextStyle(
+                  fontSize: 14,
+                  color: Colors.black87,
+                ),
+              ),
+            if (toAddress != null && toAddress.isNotEmpty)
+              Text(
+                "To: $toAddress",
+                style: const TextStyle(
+                  fontSize: 14,
+                  color: Colors.black87,
+                ),
+              ),
+          ],
           const SizedBox(height: 12),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,

@@ -21,6 +21,7 @@ class _HomeScreenState extends State<HomeScreen> {
   List<Map<String, dynamic>> recentLocations = [];
   List<Map<String, dynamic>> completedRides = [];
   bool showAllHistory = false;
+  bool showCompletedCards = true;
 
   DateTime? lastBackPressTime;
 
@@ -83,17 +84,56 @@ class _HomeScreenState extends State<HomeScreen> {
 
     final response = await supabase
         .from('bookings')
-        .select('from_city, to_city, seats, total_price, status, created_at')
+        .select('id, trip_id, seats, total_price, status, ride_time, created_at')
         .eq('user_id', user.id)
-        .eq('status', 'completed')
-        .order('created_at', ascending: false)
-        .limit(10);
+        .order('ride_time', ascending: false);
+
+    final bookings = (response as List)
+        .map((e) => e as Map<String, dynamic>)
+        .toList();
+
+    // Enrich with trip addresses
+    final tripIds = bookings
+        .map((b) => b['trip_id'])
+        .where((id) => id != null)
+        .toSet()
+        .toList();
+    Map<dynamic, Map<String, dynamic>> tripIdToTrip = {};
+    if (tripIds.isNotEmpty) {
+      final trips = await supabase
+          .from('trips')
+          .select('id, from, to')
+          .filter('id', 'in', '(${tripIds.join(',')})');
+      for (final t in (trips as List)) {
+        final m = t as Map<String, dynamic>;
+        tripIdToTrip[m['id']] = m;
+      }
+    }
+
+    final now = DateTime.now();
+    final completedOnly = bookings.where((b) {
+      final status = (b['status'] as String?) ?? 'booked';
+      final rt = b['ride_time'] as String?;
+      DateTime? rideTime;
+      if (rt != null && rt.isNotEmpty) {
+        try {
+          rideTime = DateTime.parse(rt);
+        } catch (_) {}
+      }
+      return status == 'completed' || (rideTime != null && rideTime.isBefore(now));
+    }).toList();
+
+    final enriched = completedOnly.map((b) {
+      final trip = tripIdToTrip[b['trip_id']];
+      return {
+        ...b,
+        'from_address': trip != null ? trip['from'] : null,
+        'to_address': trip != null ? trip['to'] : null,
+      };
+    }).toList();
 
     setState(() {
-      completedRides =
-          (response as List)
-              .map((item) => item as Map<String, dynamic>)
-              .toList();
+      completedRides = enriched;
     });
   }
 
@@ -107,6 +147,12 @@ class _HomeScreenState extends State<HomeScreen> {
       showAllHistory = !showAllHistory;
     });
     await fetchRecentLocations();
+  }
+
+  void toggleCompletedView() {
+    setState(() {
+      showCompletedCards = !showCompletedCards;
+    });
   }
 
   void navigateToLocationSelection({String? prefill}) async {
@@ -293,16 +339,16 @@ class _HomeScreenState extends State<HomeScreen> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     const Text(
-                      'All lines',
+                      'Past ride history',
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 18,
                       ),
                     ),
                     GestureDetector(
-                      onTap: toggleHistoryView,
+                      onTap: toggleCompletedView,
                       child: Text(
-                        showAllHistory ? 'HIDE ALL' : 'VIEW ALL',
+                        showCompletedCards ? 'HIDE' : 'VIEW',
                         style: const TextStyle(
                           color: Colors.blue,
                           fontWeight: FontWeight.bold,
@@ -312,7 +358,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   ],
                 ),
                 const SizedBox(height: 8),
-                if (completedRides.isNotEmpty)
+                if (showCompletedCards && completedRides.isNotEmpty)
                   Column(
                     children:
                         completedRides.map((ride) {
@@ -324,7 +370,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                 color: Colors.deepPurple,
                               ),
                               title: Text(
-                                "${ride['from_city']} → ${ride['to_city']}",
+                                "${ride['from_address'] ?? 'From'} → ${ride['to_address'] ?? 'To'}",
                                 style: const TextStyle(
                                   fontWeight: FontWeight.bold,
                                   color: Colors.deepPurple,
@@ -335,15 +381,28 @@ class _HomeScreenState extends State<HomeScreen> {
                                 children: [
                                   Text("Seats: ${ride['seats']}"),
                                   Text("Total: ${ride['total_price']} PKR"),
-                                  Text(
-                                    "Status: ${ride['status']}",
-                                    style: const TextStyle(
+                                  const Text(
+                                    "Status: completed",
+                                    style: TextStyle(
                                       color: Colors.blue,
                                       fontWeight: FontWeight.bold,
                                     ),
                                   ),
                                 ],
                               ),
+                              onTap: () {
+                                final fromAddr = ride['from_address'] as String?;
+                                final toAddr = ride['to_address'] as String?;
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => LocationSelectionScreen(
+                                      initialFrom: fromAddr,
+                                      initialTo: toAddr,
+                                    ),
+                                  ),
+                                );
+                              },
                             ),
                           );
                         }).toList(),

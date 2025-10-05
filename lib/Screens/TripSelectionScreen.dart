@@ -80,21 +80,43 @@ class _TripSelectionScreenState extends State<TripSelectionScreen>
       final fromCity = widget.from.trim();
       final toCity = widget.to.trim();
 
-      final tripsFromTo = await supabase
-          .from('trips')
-          .select()
-          .eq('from_city', fromCity)
-          .eq('to_city', toCity)
-          .order('depart_time', ascending: true);
+      List<Map<String, dynamic>> response;
+      if (fromCity == toCity) {
+        // Same-city: include any trips that begin or end in this city (and also same-city trips)
+        final sameFrom = await supabase
+            .from('trips')
+            .select()
+            .eq('from_city', fromCity)
+            .order('depart_time', ascending: true);
+        final sameTo = await supabase
+            .from('trips')
+            .select()
+            .eq('to_city', toCity)
+            .order('depart_time', ascending: true);
+        response = [
+          ...List<Map<String, dynamic>>.from(sameFrom),
+          ...List<Map<String, dynamic>>.from(sameTo),
+        ];
+      } else {
+        final tripsFromTo = await supabase
+            .from('trips')
+            .select()
+            .eq('from_city', fromCity)
+            .eq('to_city', toCity)
+            .order('depart_time', ascending: true);
 
-      final tripsToFrom = await supabase
-          .from('trips')
-          .select()
-          .eq('from_city', toCity)
-          .eq('to_city', fromCity)
-          .order('depart_time', ascending: true);
+        final tripsToFrom = await supabase
+            .from('trips')
+            .select()
+            .eq('from_city', toCity)
+            .eq('to_city', fromCity)
+            .order('depart_time', ascending: true);
 
-      final response = [...tripsFromTo, ...tripsToFrom];
+        response = [
+          ...List<Map<String, dynamic>>.from(tripsFromTo),
+          ...List<Map<String, dynamic>>.from(tripsToFrom),
+        ];
+      }
 
       if (response.isNotEmpty) {
         Map<String, List<Map<String, dynamic>>> loadedTrips = {};
@@ -246,67 +268,99 @@ class _TripSelectionScreenState extends State<TripSelectionScreen>
                                         CrossAxisAlignment.start,
                                     children: [
                                       Row(
+                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                         children: [
-                                          Text(
-                                            DateFormat(
-                                              'hh:mm a',
-                                            ).format(departTimePKT),
-                                            style: const TextStyle(
-                                              fontSize: 18,
-                                              fontWeight: FontWeight.bold,
-                                              color: Colors.deepPurple,
-                                            ),
+                                          Row(
+                                            children: [
+                                              Text(
+                                                DateFormat(
+                                                  'hh:mm a',
+                                                ).format(departTimePKT),
+                                                style: const TextStyle(
+                                                  fontSize: 18,
+                                                  fontWeight: FontWeight.bold,
+                                                  color: Colors.deepPurple,
+                                                ),
+                                              ),
+                                              const Text(
+                                                "  →  ",
+                                                style: TextStyle(
+                                                  fontWeight: FontWeight.bold,
+                                                  color: Colors.deepPurple,
+                                                ),
+                                              ),
+                                              Text(
+                                                DateFormat(
+                                                  'hh:mm a',
+                                                ).format(arriveTimePKT),
+                                                style: const TextStyle(
+                                                  fontSize: 18,
+                                                  fontWeight: FontWeight.bold,
+                                                  color: Colors.grey,
+                                                ),
+                                              ),
+                                            ],
                                           ),
-                                          const Text(
-                                            "  →  ",
-                                            style: TextStyle(
-                                              fontWeight: FontWeight.bold,
-                                              color: Colors.deepPurple,
-                                            ),
-                                          ),
-                                          Text(
-                                            DateFormat(
-                                              'hh:mm a',
-                                            ).format(arriveTimePKT),
-                                            style: const TextStyle(
-                                              fontSize: 18,
-                                              fontWeight: FontWeight.bold,
-                                              color: Colors.grey,
+                                          const SizedBox.shrink(),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 5),
+                                      Row(
+                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        crossAxisAlignment: CrossAxisAlignment.center,
+                                        children: [
+                                          Expanded(
+                                            child: Text(
+                                              "${trip["from"]} → ${trip["to"]}",
+                                              style: const TextStyle(
+                                                fontWeight: FontWeight.w600,
+                                                color: Colors.deepPurple,
+                                              ),
+                                              overflow: TextOverflow.ellipsis,
+                                              maxLines: 1,
                                             ),
                                           ),
                                         ],
                                       ),
                                       const SizedBox(height: 5),
-                                      Text(
-                                        "${trip["from"]} → ${trip["to"]}",
-                                        style: const TextStyle(
-                                          fontWeight: FontWeight.w600,
-                                          color: Colors.deepPurple,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 5),
                                       Row(
+                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        crossAxisAlignment: CrossAxisAlignment.center,
                                         children: [
-                                          const Icon(
-                                            Icons.directions_bus,
-                                            size: 18,
-                                            color: Colors.deepPurple,
+                                          Row(
+                                            children: [
+                                              const Icon(
+                                                Icons.directions_bus,
+                                                size: 18,
+                                                color: Colors.deepPurple,
+                                              ),
+                                              const SizedBox(width: 4),
+                                              Text(
+                                                trip["type"] ?? "",
+                                                style: const TextStyle(
+                                                  color: Colors.deepPurple,
+                                                ),
+                                              ),
+                                              if (trip["ac"] == true) ...[
+                                                const SizedBox(width: 8),
+                                                const Icon(
+                                                  Icons.ac_unit,
+                                                  size: 18,
+                                                  color: Colors.deepPurple,
+                                                ),
+                                              ],
+                                            ],
                                           ),
-                                          const SizedBox(width: 4),
-                                          Text(
-                                            trip["type"] ?? "",
-                                            style: const TextStyle(
-                                              color: Colors.deepPurple,
+                                          Padding(
+                                            padding: const EdgeInsets.only(bottom: 0),
+                                            child: Transform.scale(
+                                              scaleX: -1,
+                                              child: Image.asset(
+                                                'assets/van_logo.png',
+                                                height: 44,
+                                              ),
                                             ),
                                           ),
-                                          if (trip["ac"] == true) ...[
-                                            const SizedBox(width: 8),
-                                            const Icon(
-                                              Icons.ac_unit,
-                                              size: 18,
-                                              color: Colors.deepPurple,
-                                            ),
-                                          ],
                                         ],
                                       ),
                                       const Divider(),

@@ -3,6 +3,8 @@ import 'package:intl/intl.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:swift_ride/Widgets/theme.dart';
 import 'package:swift_ride/Screens/SignInScreen.dart';
+import 'package:timezone/timezone.dart' as tz;
+import 'package:timezone/data/latest_all.dart' as tzdata;
 
 class BecomeDriverScreen extends StatefulWidget {
   const BecomeDriverScreen({super.key});
@@ -11,37 +13,53 @@ class BecomeDriverScreen extends StatefulWidget {
   State<BecomeDriverScreen> createState() => _BecomeDriverScreenState();
 }
 
-class _BecomeDriverScreenState extends State<BecomeDriverScreen> {
+class _BecomeDriverScreenState extends State<BecomeDriverScreen>
+    with SingleTickerProviderStateMixin {
   final supabase = Supabase.instance.client;
 
   bool isLoading = true;
-  List<Map<String, dynamic>> trips = [];
+  bool isRefreshing = false;
+  Map<String, List<Map<String, dynamic>>> tripData = {};
   Map<int, int> tripIdToBookedSeats = {};
   String? currentUserId;
   bool hasDriverProfile = false;
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _phoneController = TextEditingController();
   Map<int, Map<String, int>> tripIdToBookingStatusCounts = {};
+  late TabController _tabController;
+  late List<String> weekDays;
+  DateTime? lastFetchTime;
+  List<Map<String, dynamic>> vans = [];
 
-  final List<Map<String, dynamic>> vans = List.generate(
-    10,
-    (i) => {
-      'id': i + 1,
-      'name': 'Van ${i + 1}',
-      'seats': 14,
-      'plate': 'LXR-${1000 + i}',
-    },
-  );
 
   @override
   void initState() {
     super.initState();
+    tzdata.initializeTimeZones();
+    final today = tz.TZDateTime.now(tz.getLocation('Asia/Karachi'));
+    weekDays = List.generate(7, (index) {
+      final date = today.add(Duration(days: index));
+      return index == 0 ? "Today" : DateFormat('EEE').format(date);
+    });
+    _tabController = TabController(length: weekDays.length, vsync: this);
     currentUserId = supabase.auth.currentUser?.id;
     _loadData();
   }
 
-  Future<void> _loadData() async {
-    setState(() => isLoading = true);
+  Future<void> _loadData({bool forceRefresh = false}) async {
+    // Check if we need to refresh (data is older than 2 minutes or force refresh)
+    final now = DateTime.now();
+    if (!forceRefresh && 
+        lastFetchTime != null && 
+        now.difference(lastFetchTime!).inMinutes < 2 && 
+        tripData.isNotEmpty) {
+      return; // Use cached data
+    }
+
+    setState(() {
+      isLoading = true;
+      isRefreshing = !isLoading;
+    });
     try {
       // Ensure auth state
       currentUserId = supabase.auth.currentUser?.id;
@@ -63,50 +81,95 @@ class _BecomeDriverScreenState extends State<BecomeDriverScreen> {
         return; // Show profile form
       }
 
-      // Fetch upcoming trips (today onwards)
-      final nowIso = DateTime.now().toUtc().toIso8601String();
+      // Fetch vans from Supabase
+      final fetchedVans = await supabase
+          .from('vans')
+          .select('id, name, total_seats, plate')
+          .order('id', ascending: true);
+      
+      final List<Map<String, dynamic>> vansList = List<Map<String, dynamic>>.from(fetchedVans);
+
+      // Fetch all trips for the next 7 days in one query
+      final today = tz.TZDateTime.now(tz.getLocation('Asia/Karachi'));
+      final startOfWeek = tz.TZDateTime(tz.getLocation('Asia/Karachi'), today.year, today.month, today.day);
+      final endOfWeek = startOfWeek.add(const Duration(days: 7));
+
       final String orFilter =
           (currentUserId != null)
               ? 'driver_id.is.null,driver_id.eq.' + currentUserId!
               : 'driver_id.is.null';
-      final fetchedTrips = await supabase
+
+      // Single query to fetch all trips for the week
+      final allTrips = await supabase
           .from('trips')
           .select()
-          .gte('depart_time', nowIso)
+          .gte('depart_time', startOfWeek.toUtc().toIso8601String())
+          .lt('depart_time', endOfWeek.toUtc().toIso8601String())
           .or(orFilter)
-          .order('depart_time', ascending: true)
-          .limit(30);
+          .order('depart_time', ascending: true);
 
-      // For each trip, sum booked seats and status counts
+      // Get all trip IDs for batch booking query
+      final tripIds = allTrips.map((trip) => trip['id'] as int).toList();
+      
+      // Batch fetch all bookings for all trips in one query
       final Map<int, int> seatTotals = {};
       final Map<int, Map<String, int>> statusCounts = {};
-      for (final t in fetchedTrips) {
-        final int tripId = t['id'] as int;
-        final bookings = await supabase
+      
+      if (tripIds.isNotEmpty) {
+        final allBookings = await supabase
             .from('bookings')
-            .select('seats, status, ride_time')
-            .eq('trip_id', tripId);
-        int total = 0;
-        int bookedCount = 0;
-        int completedCount = 0;
-        for (final b in bookings) {
-          total += (b['seats'] ?? 0) as int;
-          final s = (b['status'] ?? '').toString();
-          if (s == 'completed') completedCount += 1;
-          if (s == 'booked') bookedCount += 1;
+            .select('trip_id, seats, status')
+            .inFilter('trip_id', tripIds);
+
+        // Process bookings data
+        for (final booking in allBookings) {
+          final tripId = booking['trip_id'] as int;
+          final seats = (booking['seats'] ?? 0) as int;
+          final status = (booking['status'] ?? '').toString();
+          
+          seatTotals[tripId] = (seatTotals[tripId] ?? 0) + seats;
+          
+          if (!statusCounts.containsKey(tripId)) {
+            statusCounts[tripId] = {'booked': 0, 'completed': 0};
+          }
+          
+          if (status == 'completed') {
+            statusCounts[tripId]!['completed'] = (statusCounts[tripId]!['completed'] ?? 0) + 1;
+          } else if (status == 'booked') {
+            statusCounts[tripId]!['booked'] = (statusCounts[tripId]!['booked'] ?? 0) + 1;
+          }
         }
-        seatTotals[tripId] = total;
-        statusCounts[tripId] = {
-          'booked': bookedCount,
-          'completed': completedCount,
-        };
+      }
+
+      // Organize trips by day
+      final Map<String, List<Map<String, dynamic>>> dailyTrips = {};
+      for (int i = 0; i < 7; i++) {
+        final date = today.add(Duration(days: i));
+        final dayKey = i == 0 ? "Today" : DateFormat('EEE').format(date);
+        dailyTrips[dayKey] = [];
+      }
+
+      // Categorize trips by day
+      for (final trip in allTrips) {
+        final departTime = DateTime.parse(trip['depart_time']).toLocal();
+        final tripDate = DateTime(departTime.year, departTime.month, departTime.day);
+        final todayDate = DateTime(today.year, today.month, today.day);
+        final daysDiff = tripDate.difference(todayDate).inDays;
+        
+        if (daysDiff >= 0 && daysDiff < 7) {
+          final dayKey = daysDiff == 0 ? "Today" : DateFormat('EEE').format(tripDate);
+          dailyTrips[dayKey]!.add(trip);
+        }
       }
 
       setState(() {
-        trips = List<Map<String, dynamic>>.from(fetchedTrips);
+        vans = vansList;
+        tripData = dailyTrips;
         tripIdToBookedSeats = seatTotals;
         tripIdToBookingStatusCounts = statusCounts;
         isLoading = false;
+        isRefreshing = false;
+        lastFetchTime = now;
       });
     } catch (e) {
       setState(() => isLoading = false);
@@ -151,14 +214,6 @@ class _BecomeDriverScreenState extends State<BecomeDriverScreen> {
         SnackBar(content: Text('Failed to assign van: ' + e.toString())),
       );
     }
-  }
-
-  String _statusForTrip(Map<String, dynamic> trip) {
-    final String? rideTime = trip['depart_time'];
-    if (rideTime == null) return 'open';
-    final dt = DateTime.parse(rideTime).toLocal();
-    final now = DateTime.now();
-    return now.isAfter(dt) ? 'completed' : 'booked';
   }
 
   Future<void> _saveDriverProfile() async {
@@ -304,6 +359,185 @@ class _BecomeDriverScreenState extends State<BecomeDriverScreen> {
     );
   }
 
+  Widget _buildTripsList(List<Map<String, dynamic>> trips) {
+    if (isLoading && trips.isEmpty) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.all(20),
+          child: CircularProgressIndicator(color: Colors.deepPurple),
+        ),
+      );
+    }
+    
+    if (trips.isEmpty) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.all(20),
+          child: Text('No trips found for this day'),
+        ),
+      );
+    }
+
+    return ListView.builder(
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+      itemCount: trips.length,
+      itemBuilder: (context, i) {
+        final trip = trips[i];
+        final from = trip['from'] ?? trip['from_city'] ?? '';
+        final to = trip['to'] ?? trip['to_city'] ?? '';
+        final depart = DateTime.parse(trip['depart_time']).toLocal();
+        final arrive = DateTime.parse(trip['arrive_time']).toLocal();
+        final timeStr = '${DateFormat('hh:mm a').format(depart)} → ${DateFormat('hh:mm a').format(arrive)}';
+        final totalSeats = (trip['total_seats'] ?? 14) as int;
+        final booked = tripIdToBookedSeats[trip['id']] ?? 0;
+        final bool isAssignedToMe = (trip['driver_id'] != null) && (trip['driver_id'] == currentUserId);
+        final bool isUnassigned = (trip['driver_id'] == null);
+        final int? selectedVanId = (trip['van_id'] is int) ? trip['van_id'] as int : null;
+        final Map<String, int> counts = tripIdToBookingStatusCounts[trip['id']] ?? const {'booked': 0, 'completed': 0};
+
+        return Card(
+          margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 2),
+          elevation: 2,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(10),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  "$from → $to",
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                    color: Colors.deepPurple,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
+                ),
+                const SizedBox(height: 5),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.directions_bus,
+                          size: 18,
+                          color: Colors.deepPurple,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          trip["type"] ?? "",
+                          style: const TextStyle(
+                            color: Colors.deepPurple,
+                          ),
+                        ),
+                        if (trip["ac"] == true) ...[
+                          const SizedBox(width: 8),
+                          const Icon(
+                            Icons.ac_unit,
+                            size: 18,
+                            color: Colors.deepPurple,
+                          ),
+                        ],
+                      ],
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 0),
+                      child: Transform.scale(
+                        scaleX: -1,
+                        child: Image.asset(
+                          'assets/van_logo.png',
+                          height: 44,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text(timeStr),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    const Text('Van: '),
+                    DropdownButton<int>(
+                      value: selectedVanId,
+                      hint: const Text('Select Van'),
+                      items: vans.map((v) => DropdownMenuItem<int>(
+                        value: v['id'] as int,
+                        child: Text('${v['name']} (${v['plate'] ?? 'No Plate'})'),
+                      )).toList(),
+                      onChanged: (val) {
+                        if (val != null) {
+                          _setVanForTrip(trip['id'] as int, val);
+                        }
+                      },
+                    ),
+                    const Spacer(),
+                    if (isUnassigned)
+                      ElevatedButton(
+                        onPressed: () => _assignSelfToTrip(trip['id'] as int),
+                        child: const Text('Assign me'),
+                      )
+                    else if (isAssignedToMe)
+                      const Chip(
+                        label: Text('Assigned to you'),
+                        backgroundColor: Color(0xFFE8F5E9),
+                      )
+                    else
+                      const Chip(
+                        label: Text('Assigned'),
+                        backgroundColor: Color(0xFFFFF3E0),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: _buildSeatBar(totalSeats, booked),
+                    ),
+                    const SizedBox(width: 10),
+                    Text('$booked/$totalSeats booked'),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                Row(
+                  children: [
+                    Chip(
+                      avatar: const Icon(
+                        Icons.schedule,
+                        size: 16,
+                        color: Colors.white,
+                      ),
+                      label: Text('Booked: ${counts['booked'] ?? 0}'),
+                      labelStyle: const TextStyle(color: Colors.white),
+                      backgroundColor: Colors.orange,
+                    ),
+                    const SizedBox(width: 6),
+                    Chip(
+                      avatar: const Icon(
+                        Icons.check_circle,
+                        size: 16,
+                        color: Colors.white,
+                      ),
+                      label: Text('Completed: ${counts['completed'] ?? 0}'),
+                      labelStyle: const TextStyle(color: Colors.white),
+                      backgroundColor: Colors.green,
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   Widget _buildSeatBar(int totalSeats, int booked) {
     final int clampedBooked = booked.clamp(0, totalSeats);
     return Row(
@@ -326,6 +560,12 @@ class _BecomeDriverScreenState extends State<BecomeDriverScreen> {
   }
 
   @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
@@ -344,8 +584,17 @@ class _BecomeDriverScreenState extends State<BecomeDriverScreen> {
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh, color: Colors.white),
-            onPressed: _loadData,
+            icon: isRefreshing 
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      color: Colors.white,
+                      strokeWidth: 2,
+                    ),
+                  )
+                : const Icon(Icons.refresh, color: Colors.white),
+            onPressed: isRefreshing ? null : () => _loadData(forceRefresh: true),
           ),
         ],
       ),
@@ -367,10 +616,10 @@ class _BecomeDriverScreenState extends State<BecomeDriverScreen> {
                     : (!hasDriverProfile
                         ? _buildDriverProfileForm()
                         : RefreshIndicator(
-                          onRefresh: _loadData,
+                          onRefresh: () => _loadData(forceRefresh: true),
                           child: SingleChildScrollView(
                             physics: const AlwaysScrollableScrollPhysics(),
-                            padding: const EdgeInsets.all(12),
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
@@ -379,6 +628,7 @@ class _BecomeDriverScreenState extends State<BecomeDriverScreen> {
                                   style: TextStyle(
                                     fontSize: 18,
                                     fontWeight: FontWeight.bold,
+                                    color: Colors.white,
                                   ),
                                 ),
                                 const SizedBox(height: 8),
@@ -405,41 +655,30 @@ class _BecomeDriverScreenState extends State<BecomeDriverScreen> {
                                             ),
                                           ],
                                         ),
-                                        padding: const EdgeInsets.all(10),
-                                        child: Row(
-                                          children: [
-                                            Image.asset(
-                                              'assets/van_logo.png',
-                                              width: 40,
-                                            ),
-                                            const SizedBox(width: 10),
-                                            Expanded(
+                                        padding: const EdgeInsets.all(12),
                                               child: Column(
                                                 crossAxisAlignment:
                                                     CrossAxisAlignment.start,
                                                 mainAxisAlignment:
                                                     MainAxisAlignment.center,
                                                 children: [
-                                                  Text(
-                                                    van['name'],
-                                                    style: const TextStyle(
-                                                      fontWeight:
-                                                          FontWeight.bold,
-                                                    ),
-                                                  ),
-                                                  Text(
-                                                    '${van['plate']}',
-                                                    style: TextStyle(
-                                                      color:
-                                                          Colors.grey.shade600,
-                                                      fontSize: 13,
-                                                    ),
-                                                  ),
-                                                  Text(
-                                                    'Seats: ${van['seats']}',
-                                                  ),
-                                                ],
+                                            Text(
+                                              van['name'] ?? 'Unknown Van',
+                                              style: const TextStyle(
+                                                fontWeight:
+                                                    FontWeight.bold,
                                               ),
+                                            ),
+                                            Text(
+                                              van['plate'] ?? 'No Plate',
+                                              style: TextStyle(
+                                                color:
+                                                    Colors.grey.shade600,
+                                                fontSize: 13,
+                                              ),
+                                            ),
+                                            Text(
+                                              'Seats: ${van['total_seats'] ?? 14}',
                                             ),
                                           ],
                                         ),
@@ -449,270 +688,47 @@ class _BecomeDriverScreenState extends State<BecomeDriverScreen> {
                                 ),
                                 const SizedBox(height: 16),
                                 const Text(
-                                  'Upcoming Trips & Bookings',
+                                  'Available Trips',
                                   style: TextStyle(
                                     fontSize: 18,
                                     fontWeight: FontWeight.bold,
+                                    color: Colors.white,
                                   ),
                                 ),
                                 const SizedBox(height: 8),
-                                if (isLoading)
-                                  const Center(
-                                    child: Padding(
-                                      padding: EdgeInsets.all(20),
-                                      child: CircularProgressIndicator(
-                                        color: Colors.deepPurple,
+                                Container(
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(12),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black12,
+                                        blurRadius: 6,
                                       ),
-                                    ),
-                                  )
-                                else if (trips.isEmpty)
-                                  const Padding(
-                                    padding: EdgeInsets.all(20),
-                                    child: Text('No trips found'),
-                                  )
-                                else
-                                  ListView.builder(
-                                    shrinkWrap: true,
-                                    physics:
-                                        const NeverScrollableScrollPhysics(),
-                                    itemCount: trips.length,
-                                    itemBuilder: (context, i) {
-                                      final trip = trips[i];
-                                      final from =
-                                          trip['from'] ??
-                                          trip['from_city'] ??
-                                          '';
-                                      final to =
-                                          trip['to'] ?? trip['to_city'] ?? '';
-                                      final depart =
-                                          DateTime.parse(
-                                            trip['depart_time'],
-                                          ).toLocal();
-                                      final arrive =
-                                          DateTime.parse(
-                                            trip['arrive_time'],
-                                          ).toLocal();
-                                      final timeStr =
-                                          '${DateFormat('hh:mm a').format(depart)} → ${DateFormat('hh:mm a').format(arrive)}';
-                                      final totalSeats =
-                                          (trip['total_seats'] ?? 14) as int;
-                                      final booked =
-                                          tripIdToBookedSeats[trip['id']] ?? 0;
-                                      final status = _statusForTrip(trip);
-                                      final bool isAssignedToMe =
-                                          (trip['driver_id'] != null) &&
-                                          (trip['driver_id'] == currentUserId);
-                                      final bool isUnassigned =
-                                          (trip['driver_id'] == null);
-                                      final int? selectedVanId =
-                                          (trip['van_id'] is int)
-                                              ? trip['van_id'] as int
-                                              : null;
-                                      final Map<String, int> counts =
-                                          tripIdToBookingStatusCounts[trip['id']] ??
-                                          const {'booked': 0, 'completed': 0};
-
-                                      return Card(
-                                        margin: const EdgeInsets.symmetric(
-                                          vertical: 8,
+                                    ],
+                                  ),
+                                  child: Column(
+                                    children: [
+                                      TabBar(
+                                        controller: _tabController,
+                                        isScrollable: true,
+                                        labelColor: Colors.deepPurple,
+                                        unselectedLabelColor: Colors.grey,
+                                        indicatorColor: Colors.deepPurple,
+                                        tabs: weekDays.map((day) => Tab(text: day)).toList(),
+                                      ),
+                                      SizedBox(
+                                        height: 400,
+                                        child: TabBarView(
+                                          controller: _tabController,
+                                          children: weekDays.map((day) {
+                                            final trips = tripData[day] ?? [];
+                                            return _buildTripsList(trips);
+                                          }).toList(),
                                         ),
-                                        elevation: 2,
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(
-                                            12,
-                                          ),
-                                        ),
-                                        child: Padding(
-                                          padding: const EdgeInsets.all(12),
-                                          child: Column(
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.start,
-                                            children: [
-                                              Row(
-                                                mainAxisAlignment:
-                                                    MainAxisAlignment
-                                                        .spaceBetween,
-                                                children: [
-                                                  Text(
-                                                    '$from → $to',
-                                                    style: const TextStyle(
-                                                      fontWeight:
-                                                          FontWeight.bold,
-                                                      color: Colors.deepPurple,
-                                                    ),
-                                                  ),
-                                                  Container(
-                                                    padding:
-                                                        const EdgeInsets.symmetric(
-                                                          horizontal: 10,
-                                                          vertical: 4,
-                                                        ),
-                                                    decoration: BoxDecoration(
-                                                      color:
-                                                          status == 'completed'
-                                                              ? Colors
-                                                                  .green
-                                                                  .shade100
-                                                              : Colors
-                                                                  .orange
-                                                                  .shade100,
-                                                      borderRadius:
-                                                          BorderRadius.circular(
-                                                            20,
-                                                          ),
-                                                    ),
-                                                    child: Text(
-                                                      status.toUpperCase(),
-                                                      style: TextStyle(
-                                                        color:
-                                                            status ==
-                                                                    'completed'
-                                                                ? Colors
-                                                                    .green
-                                                                    .shade700
-                                                                : Colors
-                                                                    .orange
-                                                                    .shade700,
-                                                        fontWeight:
-                                                            FontWeight.bold,
-                                                      ),
-                                                    ),
-                                                  ),
-                                                ],
-                                              ),
-                                              const SizedBox(height: 6),
-                                              Text(timeStr),
-                                              const SizedBox(height: 8),
-                                              Row(
-                                                children: [
-                                                  Image.asset(
-                                                    'assets/van_logo.png',
-                                                    width: 24,
-                                                  ),
-                                                  const SizedBox(width: 8),
-                                                  const Text('Van: '),
-                                                  DropdownButton<int>(
-                                                    value: selectedVanId,
-                                                    hint: const Text(
-                                                      'Select Van',
-                                                    ),
-                                                    items:
-                                                        vans
-                                                            .map(
-                                                              (
-                                                                v,
-                                                              ) => DropdownMenuItem<
-                                                                int
-                                                              >(
-                                                                value:
-                                                                    v['id']
-                                                                        as int,
-                                                                child: Text(
-                                                                  v['name']
-                                                                      as String,
-                                                                ),
-                                                              ),
-                                                            )
-                                                            .toList(),
-                                                    onChanged: (val) {
-                                                      if (val != null) {
-                                                        _setVanForTrip(
-                                                          trip['id'] as int,
-                                                          val,
-                                                        );
-                                                      }
-                                                    },
-                                                  ),
-                                                  const Spacer(),
-                                                  if (isUnassigned)
-                                                    ElevatedButton(
-                                                      onPressed:
-                                                          () =>
-                                                              _assignSelfToTrip(
-                                                                trip['id']
-                                                                    as int,
-                                                              ),
-                                                      child: const Text(
-                                                        'Assign me',
-                                                      ),
-                                                    )
-                                                  else if (isAssignedToMe)
-                                                    const Chip(
-                                                      label: Text(
-                                                        'Assigned to you',
-                                                      ),
-                                                      backgroundColor: Color(
-                                                        0xFFE8F5E9,
-                                                      ),
-                                                    )
-                                                  else
-                                                    const Chip(
-                                                      label: Text('Assigned'),
-                                                      backgroundColor: Color(
-                                                        0xFFFFF3E0,
-                                                      ),
-                                                    ),
-                                                ],
-                                              ),
-                                              const SizedBox(height: 8),
-                                              Row(
-                                                mainAxisAlignment:
-                                                    MainAxisAlignment
-                                                        .spaceBetween,
-                                                children: [
-                                                  Expanded(
-                                                    child: _buildSeatBar(
-                                                      totalSeats,
-                                                      booked,
-                                                    ),
-                                                  ),
-                                                  const SizedBox(width: 10),
-                                                  Text(
-                                                    '$booked/$totalSeats booked',
-                                                  ),
-                                                ],
-                                              ),
-                                              const SizedBox(height: 6),
-                                              Row(
-                                                children: [
-                                                  Chip(
-                                                    avatar: const Icon(
-                                                      Icons.schedule,
-                                                      size: 16,
-                                                      color: Colors.white,
-                                                    ),
-                                                    label: Text(
-                                                      'Booked: ${counts['booked'] ?? 0}',
-                                                    ),
-                                                    labelStyle: const TextStyle(
-                                                      color: Colors.white,
-                                                    ),
-                                                    backgroundColor:
-                                                        Colors.orange,
-                                                  ),
-                                                  const SizedBox(width: 6),
-                                                  Chip(
-                                                    avatar: const Icon(
-                                                      Icons.check_circle,
-                                                      size: 16,
-                                                      color: Colors.white,
-                                                    ),
-                                                    label: Text(
-                                                      'Completed: ${counts['completed'] ?? 0}',
-                                                    ),
-                                                    labelStyle: const TextStyle(
-                                                      color: Colors.white,
-                                                    ),
-                                                    backgroundColor:
-                                                        Colors.green,
-                                                  ),
-                                                ],
                                               ),
                                             ],
                                           ),
-                                        ),
-                                      );
-                                    },
                                   ),
                               ],
                             ),
