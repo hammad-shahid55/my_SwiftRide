@@ -320,41 +320,47 @@ class _TripSelectionScreenState extends State<TripSelectionScreen>
                                               maxLines: 1,
                                             ),
                                           ),
-                                          Padding(
-                                            padding: const EdgeInsets.only(left: 8),
-                                            child: Transform.scale(
-                                              scaleX: -1,
-                                              child: Image.asset(
-                                                'assets/van_logo.png',
-                                                height: 34,
-                                              ),
-                                            ),
-                                          ),
                                         ],
                                       ),
                                       const SizedBox(height: 5),
                                       Row(
+                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        crossAxisAlignment: CrossAxisAlignment.center,
                                         children: [
-                                          const Icon(
-                                            Icons.directions_bus,
-                                            size: 18,
-                                            color: Colors.deepPurple,
+                                          Row(
+                                            children: [
+                                              const Icon(
+                                                Icons.directions_bus,
+                                                size: 18,
+                                                color: Colors.deepPurple,
+                                              ),
+                                              const SizedBox(width: 4),
+                                              Text(
+                                                trip["type"] ?? "",
+                                                style: const TextStyle(
+                                                  color: Colors.deepPurple,
+                                                ),
+                                              ),
+                                              if (trip["ac"] == true) ...[
+                                                const SizedBox(width: 8),
+                                                const Icon(
+                                                  Icons.ac_unit,
+                                                  size: 18,
+                                                  color: Colors.deepPurple,
+                                                ),
+                                              ],
+                                            ],
                                           ),
-                                          const SizedBox(width: 4),
-                                          Text(
-                                            trip["type"] ?? "",
-                                            style: const TextStyle(
-                                              color: Colors.deepPurple,
+                                          Padding(
+                                            padding: const EdgeInsets.only(bottom: 0),
+                                            child: Transform.scale(
+                                              scaleX: -1,
+                                              child: Image.asset(
+                                                'assets/van_logo.png',
+                                                height: 44,
+                                              ),
                                             ),
                                           ),
-                                          if (trip["ac"] == true) ...[
-                                            const SizedBox(width: 8),
-                                            const Icon(
-                                              Icons.ac_unit,
-                                              size: 18,
-                                              color: Colors.deepPurple,
-                                            ),
-                                          ],
                                         ],
                                       ),
                                       const Divider(),
