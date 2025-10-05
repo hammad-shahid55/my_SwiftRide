@@ -29,16 +29,8 @@ class _BecomeDriverScreenState extends State<BecomeDriverScreen>
   late TabController _tabController;
   late List<String> weekDays;
   DateTime? lastFetchTime;
+  List<Map<String, dynamic>> vans = [];
 
-  final List<Map<String, dynamic>> vans = List.generate(
-    10,
-    (i) => {
-      'id': i + 1,
-      'name': 'Van ${i + 1}',
-      'seats': 14,
-      'plate': 'LXR-${1000 + i}',
-    },
-  );
 
   @override
   void initState() {
@@ -88,6 +80,14 @@ class _BecomeDriverScreenState extends State<BecomeDriverScreen>
         setState(() => isLoading = false);
         return; // Show profile form
       }
+
+      // Fetch vans from Supabase
+      final fetchedVans = await supabase
+          .from('vans')
+          .select('id, name, total_seats, plate')
+          .order('id', ascending: true);
+      
+      final List<Map<String, dynamic>> vansList = List<Map<String, dynamic>>.from(fetchedVans);
 
       // Fetch all trips for the next 7 days in one query
       final today = tz.TZDateTime.now(tz.getLocation('Asia/Karachi'));
@@ -163,6 +163,7 @@ class _BecomeDriverScreenState extends State<BecomeDriverScreen>
       }
 
       setState(() {
+        vans = vansList;
         tripData = dailyTrips;
         tripIdToBookedSeats = seatTotals;
         tripIdToBookingStatusCounts = statusCounts;
@@ -378,7 +379,7 @@ class _BecomeDriverScreenState extends State<BecomeDriverScreen>
     }
 
     return ListView.builder(
-      padding: const EdgeInsets.all(8),
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
       itemCount: trips.length,
       itemBuilder: (context, i) {
         final trip = trips[i];
@@ -395,13 +396,13 @@ class _BecomeDriverScreenState extends State<BecomeDriverScreen>
         final Map<String, int> counts = tripIdToBookingStatusCounts[trip['id']] ?? const {'booked': 0, 'completed': 0};
 
         return Card(
-          margin: const EdgeInsets.symmetric(vertical: 8),
+          margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 2),
           elevation: 2,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
           ),
           child: Padding(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.all(10),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -466,7 +467,7 @@ class _BecomeDriverScreenState extends State<BecomeDriverScreen>
                       hint: const Text('Select Van'),
                       items: vans.map((v) => DropdownMenuItem<int>(
                         value: v['id'] as int,
-                        child: Text(v['name'] as String),
+                        child: Text('${v['name']} (${v['plate'] ?? 'No Plate'})'),
                       )).toList(),
                       onChanged: (val) {
                         if (val != null) {
@@ -618,7 +619,7 @@ class _BecomeDriverScreenState extends State<BecomeDriverScreen>
                           onRefresh: () => _loadData(forceRefresh: true),
                           child: SingleChildScrollView(
                             physics: const AlwaysScrollableScrollPhysics(),
-                            padding: const EdgeInsets.all(12),
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
@@ -655,21 +656,21 @@ class _BecomeDriverScreenState extends State<BecomeDriverScreen>
                                           ],
                                         ),
                                         padding: const EdgeInsets.all(12),
-                                        child: Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.center,
-                                          children: [
+                                              child: Column(
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.start,
+                                                mainAxisAlignment:
+                                                    MainAxisAlignment.center,
+                                                children: [
                                             Text(
-                                              van['name'],
+                                              van['name'] ?? 'Unknown Van',
                                               style: const TextStyle(
                                                 fontWeight:
                                                     FontWeight.bold,
                                               ),
                                             ),
                                             Text(
-                                              '${van['plate']}',
+                                              van['plate'] ?? 'No Plate',
                                               style: TextStyle(
                                                 color:
                                                     Colors.grey.shade600,
@@ -677,7 +678,7 @@ class _BecomeDriverScreenState extends State<BecomeDriverScreen>
                                               ),
                                             ),
                                             Text(
-                                              'Seats: ${van['seats']}',
+                                              'Seats: ${van['total_seats'] ?? 14}',
                                             ),
                                           ],
                                         ),
