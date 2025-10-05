@@ -268,43 +268,69 @@ class _TripSelectionScreenState extends State<TripSelectionScreen>
                                         CrossAxisAlignment.start,
                                     children: [
                                       Row(
+                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                         children: [
-                                          Text(
-                                            DateFormat(
-                                              'hh:mm a',
-                                            ).format(departTimePKT),
-                                            style: const TextStyle(
-                                              fontSize: 18,
-                                              fontWeight: FontWeight.bold,
-                                              color: Colors.deepPurple,
-                                            ),
+                                          Row(
+                                            children: [
+                                              Text(
+                                                DateFormat(
+                                                  'hh:mm a',
+                                                ).format(departTimePKT),
+                                                style: const TextStyle(
+                                                  fontSize: 18,
+                                                  fontWeight: FontWeight.bold,
+                                                  color: Colors.deepPurple,
+                                                ),
+                                              ),
+                                              const Text(
+                                                "  →  ",
+                                                style: TextStyle(
+                                                  fontWeight: FontWeight.bold,
+                                                  color: Colors.deepPurple,
+                                                ),
+                                              ),
+                                              Text(
+                                                DateFormat(
+                                                  'hh:mm a',
+                                                ).format(arriveTimePKT),
+                                                style: const TextStyle(
+                                                  fontSize: 18,
+                                                  fontWeight: FontWeight.bold,
+                                                  color: Colors.grey,
+                                                ),
+                                              ),
+                                            ],
                                           ),
-                                          const Text(
-                                            "  →  ",
-                                            style: TextStyle(
-                                              fontWeight: FontWeight.bold,
-                                              color: Colors.deepPurple,
-                                            ),
-                                          ),
-                                          Text(
-                                            DateFormat(
-                                              'hh:mm a',
-                                            ).format(arriveTimePKT),
-                                            style: const TextStyle(
-                                              fontSize: 18,
-                                              fontWeight: FontWeight.bold,
-                                              color: Colors.grey,
-                                            ),
-                                          ),
+                                          const SizedBox.shrink(),
                                         ],
                                       ),
                                       const SizedBox(height: 5),
-                                      Text(
-                                        "${trip["from"]} → ${trip["to"]}",
-                                        style: const TextStyle(
-                                          fontWeight: FontWeight.w600,
-                                          color: Colors.deepPurple,
-                                        ),
+                                      Row(
+                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        crossAxisAlignment: CrossAxisAlignment.center,
+                                        children: [
+                                          Expanded(
+                                            child: Text(
+                                              "${trip["from"]} → ${trip["to"]}",
+                                              style: const TextStyle(
+                                                fontWeight: FontWeight.w600,
+                                                color: Colors.deepPurple,
+                                              ),
+                                              overflow: TextOverflow.ellipsis,
+                                              maxLines: 1,
+                                            ),
+                                          ),
+                                          Padding(
+                                            padding: const EdgeInsets.only(left: 8),
+                                            child: Transform.scale(
+                                              scaleX: -1,
+                                              child: Image.asset(
+                                                'assets/van_logo.png',
+                                                height: 34,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
                                       ),
                                       const SizedBox(height: 5),
                                       Row(
