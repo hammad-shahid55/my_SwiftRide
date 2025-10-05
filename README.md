@@ -1,4 +1,4 @@
-<<<<<<< HEAD
+
 # Swift Ride — Complete Project Guide
 
 Swift Ride is a cross-platform ride booking and management system, featuring:
