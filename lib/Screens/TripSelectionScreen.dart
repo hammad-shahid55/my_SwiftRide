@@ -80,21 +80,43 @@ class _TripSelectionScreenState extends State<TripSelectionScreen>
       final fromCity = widget.from.trim();
       final toCity = widget.to.trim();
 
-      final tripsFromTo = await supabase
-          .from('trips')
-          .select()
-          .eq('from_city', fromCity)
-          .eq('to_city', toCity)
-          .order('depart_time', ascending: true);
+      List<Map<String, dynamic>> response;
+      if (fromCity == toCity) {
+        // Same-city: include any trips that begin or end in this city (and also same-city trips)
+        final sameFrom = await supabase
+            .from('trips')
+            .select()
+            .eq('from_city', fromCity)
+            .order('depart_time', ascending: true);
+        final sameTo = await supabase
+            .from('trips')
+            .select()
+            .eq('to_city', toCity)
+            .order('depart_time', ascending: true);
+        response = [
+          ...List<Map<String, dynamic>>.from(sameFrom),
+          ...List<Map<String, dynamic>>.from(sameTo),
+        ];
+      } else {
+        final tripsFromTo = await supabase
+            .from('trips')
+            .select()
+            .eq('from_city', fromCity)
+            .eq('to_city', toCity)
+            .order('depart_time', ascending: true);
 
-      final tripsToFrom = await supabase
-          .from('trips')
-          .select()
-          .eq('from_city', toCity)
-          .eq('to_city', fromCity)
-          .order('depart_time', ascending: true);
+        final tripsToFrom = await supabase
+            .from('trips')
+            .select()
+            .eq('from_city', toCity)
+            .eq('to_city', fromCity)
+            .order('depart_time', ascending: true);
 
-      final response = [...tripsFromTo, ...tripsToFrom];
+        response = [
+          ...List<Map<String, dynamic>>.from(tripsFromTo),
+          ...List<Map<String, dynamic>>.from(tripsToFrom),
+        ];
+      }
 
       if (response.isNotEmpty) {
         Map<String, List<Map<String, dynamic>>> loadedTrips = {};
