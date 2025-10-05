@@ -8,8 +8,10 @@ import 'package:swift_ride/Screens/TripSelectionScreen.dart';
 import 'package:swift_ride/Widgets/theme.dart';
 
 class LocationSelectionScreen extends StatefulWidget {
-  final String? initialValue;
-  const LocationSelectionScreen({super.key, this.initialValue});
+  final String? initialValue; // legacy: prefill 'to'
+  final String? initialFrom;
+  final String? initialTo;
+  const LocationSelectionScreen({super.key, this.initialValue, this.initialFrom, this.initialTo});
 
   @override
   State<LocationSelectionScreen> createState() =>
@@ -248,10 +250,17 @@ class _LocationSelectionScreenState extends State<LocationSelectionScreen> {
   @override
   void initState() {
     super.initState();
-    setCurrentLocation('from'); // Set current location for from field initially
+    // Prefill from/to if provided; otherwise set current location for 'from'
+    if (widget.initialFrom != null && widget.initialFrom!.trim().isNotEmpty) {
+      fromController.text = widget.initialFrom!;
+    } else {
+      setCurrentLocation('from');
+    }
     fetchLocationHistory();
     toFocusNode.requestFocus();
-    if (widget.initialValue != null) {
+    if (widget.initialTo != null && widget.initialTo!.trim().isNotEmpty) {
+      toController.text = widget.initialTo!;
+    } else if (widget.initialValue != null) {
       toController.text = widget.initialValue!;
     }
   }

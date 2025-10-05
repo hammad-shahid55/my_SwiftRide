@@ -390,6 +390,19 @@ class _HomeScreenState extends State<HomeScreen> {
                                   ),
                                 ],
                               ),
+                              onTap: () {
+                                final fromAddr = ride['from_address'] as String?;
+                                final toAddr = ride['to_address'] as String?;
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => LocationSelectionScreen(
+                                      initialFrom: fromAddr,
+                                      initialTo: toAddr,
+                                    ),
+                                  ),
+                                );
+                              },
                             ),
                           );
                         }).toList(),
