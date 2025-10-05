@@ -1202,4 +1202,4 @@ Below is a concise inventory of all screens under `lib/Screens` with their role 
 
 - `WelcomeScreen.dart`
   - Landing for unauthenticated users; routes to sign-in or location permission flow as needed.
->>>>>>> c3d3df6648a0347207f637f0ecdb36d988d8c1ac
+
