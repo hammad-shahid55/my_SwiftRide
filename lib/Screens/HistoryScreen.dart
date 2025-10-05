@@ -130,6 +130,16 @@ class _HistoryScreenState extends State<HistoryScreen>
       } catch (_) {}
     }
     final bool isUpcoming = rideTime == null || rideTime.isAfter(DateTime.now());
+    // Determine displayed status: treat past rides as completed in UI
+    final String displayedStatus = (rideTime != null && rideTime.isBefore(DateTime.now()))
+        ? 'completed'
+        : status;
+    final Color statusColor = displayedStatus == 'booked'
+        ? Colors.green
+        : displayedStatus == 'completed'
+            ? Colors.blue
+            : Colors.red;
+
     return Card(
       margin: const EdgeInsets.all(10),
       child: Padding(
@@ -157,15 +167,10 @@ class _HistoryScreenState extends State<HistoryScreen>
             Text("Seats: ${booking['seats']}"),
             Text("Total Price: ${booking['total_price']} PKR"),
             Text(
-              "Status: ${booking['status']}",
+              "Status: $displayedStatus",
               style: TextStyle(
                 fontWeight: FontWeight.bold,
-                color:
-                    booking['status'] == 'booked'
-                        ? Colors.green
-                        : booking['status'] == 'completed'
-                        ? Colors.blue
-                        : Colors.red,
+                color: statusColor,
               ),
             ),
             if (rideDisplay != null)

@@ -83,17 +83,56 @@ class _HomeScreenState extends State<HomeScreen> {
 
     final response = await supabase
         .from('bookings')
-        .select('from_city, to_city, seats, total_price, status, created_at')
+        .select('id, trip_id, seats, total_price, status, ride_time, created_at')
         .eq('user_id', user.id)
-        .eq('status', 'completed')
-        .order('created_at', ascending: false)
-        .limit(10);
+        .order('ride_time', ascending: false);
+
+    final bookings = (response as List)
+        .map((e) => e as Map<String, dynamic>)
+        .toList();
+
+    // Enrich with trip addresses
+    final tripIds = bookings
+        .map((b) => b['trip_id'])
+        .where((id) => id != null)
+        .toSet()
+        .toList();
+    Map<dynamic, Map<String, dynamic>> tripIdToTrip = {};
+    if (tripIds.isNotEmpty) {
+      final trips = await supabase
+          .from('trips')
+          .select('id, from, to')
+          .filter('id', 'in', '(${tripIds.join(',')})');
+      for (final t in (trips as List)) {
+        final m = t as Map<String, dynamic>;
+        tripIdToTrip[m['id']] = m;
+      }
+    }
+
+    final now = DateTime.now();
+    final completedOnly = bookings.where((b) {
+      final status = (b['status'] as String?) ?? 'booked';
+      final rt = b['ride_time'] as String?;
+      DateTime? rideTime;
+      if (rt != null && rt.isNotEmpty) {
+        try {
+          rideTime = DateTime.parse(rt);
+        } catch (_) {}
+      }
+      return status == 'completed' || (rideTime != null && rideTime.isBefore(now));
+    }).toList();
+
+    final enriched = completedOnly.map((b) {
+      final trip = tripIdToTrip[b['trip_id']];
+      return {
+        ...b,
+        'from_address': trip != null ? trip['from'] : null,
+        'to_address': trip != null ? trip['to'] : null,
+      };
+    }).toList();
 
     setState(() {
-      completedRides =
-          (response as List)
-              .map((item) => item as Map<String, dynamic>)
-              .toList();
+      completedRides = enriched;
     });
   }
 
@@ -324,7 +363,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                 color: Colors.deepPurple,
                               ),
                               title: Text(
-                                "${ride['from_city']} → ${ride['to_city']}",
+                                "${ride['from_address'] ?? 'From'} → ${ride['to_address'] ?? 'To'}",
                                 style: const TextStyle(
                                   fontWeight: FontWeight.bold,
                                   color: Colors.deepPurple,
