@@ -658,7 +658,7 @@ npm run preview
 
 #### Web Release
 - [ ] Build optimized web assets
-- [ ] Configure hosting (Firebase, Netlify, etc.)
+- [ ] Configure hosting (Vercel, Netlify, etc.)
 - [ ] Set up custom domain
 - [ ] Configure HTTPS
 
@@ -954,35 +954,36 @@ CREATE TABLE vehicles (
 
 **Real-time Notifications**:
 ```dart
-// Add to pubspec.yaml
-dependencies:
-  firebase_messaging: ^14.7.10
-  flutter_local_notifications: ^16.3.2
-
-// Implement push notifications
+// Use Supabase real-time for notifications
 class NotificationService {
   static Future<void> initialize() async {
-    await FirebaseMessaging.instance.requestPermission();
-    // Configure notification channels
+    // Subscribe to Supabase real-time channels
+    Supabase.instance.client
+      .channel('notifications')
+      .on('postgres_changes', 
+        { event: 'INSERT', schema: 'public', table: 'notifications' },
+        (payload) => showNotification(payload.new)
+      )
+      .subscribe();
   }
 }
 ```
 
 **Advanced Analytics**:
 ```dart
-// Add analytics package
-dependencies:
-  firebase_analytics: ^10.7.4
-
-// Track user events
-FirebaseAnalytics.instance.logEvent(
-  name: 'trip_booked',
-  parameters: {
-    'trip_id': tripId,
-    'price': price,
-    'distance': distance,
-  },
-);
+// Track user events using Supabase
+class AnalyticsService {
+  static Future<void> trackEvent(String eventName, Map<String, dynamic> parameters) async {
+    await Supabase.instance.client
+      .from('analytics_events')
+      .insert({
+        'event_name': eventName,
+        'parameters': parameters,
+        'user_id': Supabase.instance.client.auth.currentUser?.id,
+        'created_at': DateTime.now().toIso8601String(),
+      });
+  }
+}
 ```
 
 #### Database Extensions
@@ -1019,16 +1020,22 @@ CREATE TABLE route_waypoints (
 
 **Advanced Analytics Dashboard**:
 ```typescript
-// Add chart libraries
-npm install recharts @types/recharts
-
-// Create analytics components
+// Create analytics components using Supabase data
 interface AnalyticsData {
   totalTrips: number;
   revenue: number;
   activeUsers: number;
   completionRate: number;
 }
+
+// Fetch analytics data from Supabase
+const fetchAnalytics = async () => {
+  const { data } = await supabase
+    .from('trips')
+    .select('*')
+    .gte('created_at', startDate);
+  return data;
+};
 ```
 
 **Real-time Monitoring**:
@@ -1098,15 +1105,15 @@ class CacheService {
 
 #### Production Deployment
 - **Database**: Use Supabase production instance
-- **CDN**: Configure CloudFlare for static assets
-- **Monitoring**: Set up error tracking (Sentry)
-- **Backups**: Configure automated database backups
+- **CDN**: Configure CDN for static assets (optional)
+- **Monitoring**: Set up error tracking (Supabase built-in monitoring)
+- **Backups**: Configure automated database backups via Supabase
 
 #### Scaling Considerations
-- **Database**: Implement read replicas for heavy queries
-- **Caching**: Use Redis for session management
+- **Database**: Use Supabase's built-in scaling and connection pooling
+- **Caching**: Implement Supabase real-time subscriptions for live data
 - **Load Balancing**: Configure multiple app instances
-- **Monitoring**: Set up performance monitoring
+- **Monitoring**: Use Supabase dashboard and built-in analytics
 
 ### Contributing Guidelines
 
@@ -1157,6 +1164,344 @@ This comprehensive documentation covers every aspect of the Swift Ride project, 
 - **Security best practices** and deployment strategies
 
 For any specific implementation details, refer to the corresponding source files in the project structure. This documentation serves as a complete guide for development, deployment, and maintenance of the Swift Ride application.
+
+---
+
+## Complete Screen Reference - How Each Screen Works
+
+This section provides detailed information about how each screen functions in the Swift Ride project, including user flows, data handling, and technical implementation.
+
+### **Flutter App Screens (22 Screens)**
+
+#### **1. SplashScreen.dart**
+**Purpose**: App initialization and routing logic
+**How it works**:
+- Shows animated splash screen with app logo
+- Checks internet connectivity using `connectivity_plus`
+- Verifies first-time user using `SharedPreferences`
+- Checks authentication state via Supabase
+- Requests location permissions using `geolocator`
+- Routes to appropriate screen based on user state:
+  - First time → `OnBoardingScreen`
+  - Not authenticated → `WelcomeScreen`
+  - Authenticated → `HomeScreen`
+  - Location denied → `EnableLocationScreen`
+
+#### **2. OnBoardingScreen.dart**
+**Purpose**: First-time user introduction
+**How it works**:
+- Displays 3-4 onboarding slides with images and text
+- Uses `PageView` for smooth slide transitions
+- Tracks slide progress with indicators
+- "Skip" button to jump to authentication
+- "Next" button to proceed through slides
+- "Get Started" button on final slide
+- Sets onboarding complete flag in `SharedPreferences`
+- Routes to `WelcomeScreen` or `SignInScreen`
+
+#### **3. WelcomeScreen.dart**
+**Purpose**: Entry point for unauthenticated users
+**How it works**:
+- Shows app branding and welcome message
+- "Sign In" button → `SignInScreen`
+- "Sign Up" button → `SignUpScreen`
+- "Continue with Google" → Google OAuth flow
+- Checks location permission status
+- If location denied → `EnableLocationScreen`
+- Uses `google_sign_in` package for OAuth
+
+#### **4. EnableLocationScreen.dart**
+**Purpose**: Location permission handling
+**How it works**:
+- Explains why location access is needed
+- "Enable Location" button triggers permission request
+- Uses `geolocator` to request location permission
+- Handles permission states: granted, denied, permanently denied
+- "Skip for now" option for users who deny permission
+- Routes to `HomeScreen` or `WelcomeScreen` based on permission
+
+#### **5. SignInScreen.dart**
+**Purpose**: User authentication
+**How it works**:
+- Email and password input fields using `CustomTextField`
+- Form validation for email format and password length
+- "Sign In" button calls Supabase auth
+- "Forgot Password" → `ForgotPasswordScreen`
+- "Don't have account?" → `SignUpScreen`
+- "Continue with Google" → Google OAuth
+- Loading state during authentication
+- Error handling for invalid credentials
+- Success → `HomeScreen`
+
+#### **6. SignUpScreen.dart**
+**Purpose**: New user registration
+**How it works**:
+- Name, email, password input fields
+- Password confirmation field
+- Terms and conditions checkbox
+- Form validation for all fields
+- "Sign Up" button creates Supabase user
+- Email verification handling
+- "Already have account?" → `SignInScreen`
+- Success → `HomeScreen`
+
+#### **7. PhoneNumberSignUpScreen.dart**
+**Purpose**: Phone-based registration
+**How it works**:
+- Phone number input with country code
+- OTP verification using `otp_text_field`
+- Sends OTP via Supabase auth
+- Verifies OTP code
+- Creates user profile after verification
+- Fallback to email registration
+
+#### **8. ForgotPasswordScreen.dart**
+**Purpose**: Password reset functionality
+**How it works**:
+- Email input for password reset
+- Sends reset email via Supabase auth
+- Shows confirmation message
+- "Back to Sign In" → `SignInScreen`
+- Handles email delivery status
+
+#### **9. HomeScreen.dart**
+**Purpose**: Main dashboard after authentication
+**How it works**:
+- Displays user greeting with name from `profiles` table
+- Shows recent locations from `location_history` table
+- Displays completed trips from `bookings` table
+- Quick address entry field
+- "Book a Ride" button → `LocationSelectionScreen`
+- "View All" for location history
+- Navigation drawer with menu options
+- Wallet balance display
+- Logout functionality
+
+#### **10. LocationSelectionScreen.dart**
+**Purpose**: Address selection and search
+**How it works**:
+- Search field with autocomplete using `google_place`
+- Current location button using `geolocator`
+- Recent locations list from `location_history`
+- Map-based selection → `SetLocationMapScreen`
+- Address validation and geocoding
+- Saves selected location to `location_history`
+- "Continue" → `TripSelectionScreen`
+
+#### **11. SetLocationMapScreen.dart**
+**Purpose**: Map-based location picker
+**How it works**:
+- Google Maps display with user's current location
+- Draggable marker for precise location selection
+- Address search with autocomplete
+- "Confirm Location" button
+- Geocoding selected coordinates to address
+- Returns to `LocationSelectionScreen` with selected location
+
+#### **12. TripSelectionScreen.dart**
+**How it works**:
+- Fetches trips from `trips` table for both directions (A→B and B→A)
+- Groups trips by next 7 days
+- Filters "Today" trips to future departures only
+- Displays trip details: time, price, seats, distance, duration
+- "Book Now" button → `DirectionsMapScreen`
+- Search and filter functionality
+- Real-time trip availability
+
+#### **13. DirectionsMapScreen.dart**
+**Purpose**: Route display and booking interface
+**How it works**:
+- Google Maps with route polyline between pickup and dropoff
+- Custom markers for pickup and dropoff locations
+- Route details: distance, duration, estimated time
+- `BookingWidget` overlay for seat selection
+- Real-time traffic information
+- "Book Trip" button for final booking
+- Handles route optimization
+
+#### **14. BookingWidget.dart**
+**Purpose**: Seat selection and booking process
+**How it works**:
+- Seat selection interface
+- Passenger count selection
+- Price calculation based on seats
+- "Book Now" button for payment
+- Payment method selection
+- Booking confirmation
+- Creates booking record in `bookings` table
+
+#### **15. WalletScreen.dart**
+**Purpose**: Wallet management and payments
+**How it works**:
+- Displays current wallet balance from `profiles` table
+- Top-up amount input (minimum Rs 500)
+- Stripe PaymentSheet integration
+- Payment processing via Supabase Edge Function
+- Wallet balance update via RPC `increment_wallet`
+- Transaction history display
+- Payment success/failure handling
+
+#### **16. HistoryScreen.dart**
+**Purpose**: Trip history display
+**How it works**:
+- Fetches completed trips from `bookings` table
+- Filters by user ID and completed status
+- Displays trip details: date, route, price, status
+- Search and filter by date range
+- Trip rating and feedback
+- "Book Again" functionality
+
+#### **17. UserProfileScreen.dart**
+**Purpose**: User profile management
+**How it works**:
+- Displays user information from `profiles` table
+- Editable fields: name, email, phone
+- Profile picture using `image_picker`
+- Save changes to Supabase
+- Password change functionality
+- Account deletion option
+
+#### **18. SettingsScreen.dart**
+**Purpose**: App preferences and settings
+**How it works**:
+- Notification preferences
+- Language selection
+- Theme settings (light/dark)
+- Privacy settings
+- App version information
+- Clear cache option
+- Location permission settings
+
+#### **19. AccountActionsScreen.dart**
+**Purpose**: Account management shortcuts
+**How it works**:
+- Quick access to profile editing
+- Password change
+- Logout functionality
+- Account deletion
+- Privacy policy and terms
+- Contact support
+
+#### **20. BecomeDriverScreen.dart**
+**Purpose**: Driver onboarding
+**How it works**:
+- Driver registration form
+- License number input
+- Vehicle information
+- Document upload using `image_picker`
+- Driver verification process
+- Status tracking
+- Driver dashboard access
+
+#### **21. ContactUsScreen.dart**
+**Purpose**: Support and contact information
+**How it works**:
+- Contact information display
+- Email and phone number links
+- Support ticket creation
+- FAQ section
+- Social media links
+- Office address and hours
+
+#### **22. PrivacyPolicyScreen.dart & TermsAndConditionsScreen.dart**
+**Purpose**: Legal information display
+**How it works**:
+- Static legal content
+- Scrollable text display
+- "Accept" and "Decline" buttons
+- Version tracking
+- Last updated information
+
+### **Admin Web Pages (8 Pages)**
+
+#### **1. App.tsx**
+**Purpose**: Main admin layout and navigation
+**How it works**:
+- Sidebar navigation with menu items
+- Header with user info and logout
+- Router outlet for page content
+- Responsive design for different screen sizes
+- Authentication state management
+- Route protection for admin access
+
+#### **2. Dashboard.tsx**
+**Purpose**: Admin overview and KPIs
+**How it works**:
+- Fetches statistics from Supabase tables
+- Displays total trips, users, revenue
+- Real-time data updates
+- Charts and graphs for analytics
+- Recent activity feed
+- Quick action buttons
+
+#### **3. Trips.tsx**
+**Purpose**: Trip management
+**How it works**:
+- Lists all trips from `trips` table
+- Create, edit, delete trip functionality
+- Search and filter by route, date, status
+- Bulk operations
+- Trip status management
+- Real-time updates
+
+#### **4. Users.tsx**
+**Purpose**: User management
+**How it works**:
+- Lists all users from `profiles` table
+- User details and activity
+- Account status management
+- User search and filtering
+- Export user data
+- User communication tools
+
+#### **5. Drivers.tsx**
+**Purpose**: Driver management
+**How it works**:
+- Lists all drivers from `drivers` table
+- Driver verification status
+- License and document management
+- Driver performance metrics
+- Assignment to trips
+- Driver communication
+
+#### **6. DriverDetail.tsx**
+**Purpose**: Individual driver details
+**How it works**:
+- Detailed driver information
+- Trip history and performance
+- Document verification
+- Rating and feedback
+- Contact information
+- Status updates
+
+#### **7. Payments.tsx**
+**Purpose**: Payment monitoring
+**How it works**:
+- Lists all payments from Stripe
+- Wallet top-up transactions
+- Payment status tracking
+- Refund processing
+- Financial reports
+- Transaction reconciliation
+
+#### **8. Bookings.tsx**
+**Purpose**: Booking management
+**How it works**:
+- Lists all bookings from `bookings` table
+- Booking status management
+- Customer communication
+- Trip assignment
+- Cancellation handling
+- Booking analytics
+
+### **Data Flow Summary**
+
+1. **Authentication Flow**: Splash → Onboarding → Welcome → SignIn/SignUp → Home
+2. **Booking Flow**: Home → LocationSelection → TripSelection → DirectionsMap → Booking
+3. **Payment Flow**: Wallet → Stripe → Supabase RPC → Balance Update
+4. **Admin Flow**: Login → Dashboard → Manage (Trips/Users/Drivers/Bookings)
+
+Each screen is designed to work seamlessly with Supabase backend, providing real-time updates, secure authentication, and efficient data management for the complete ride booking system.
 
 ---
 
