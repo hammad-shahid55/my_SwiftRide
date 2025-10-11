@@ -220,7 +220,10 @@ void main() {
       final isValid = key.currentState?.validateNow();
       expect(isValid, false);
 
-      // Check error message
+      // Pump to update the UI with error message
+      await tester.pump();
+      
+      // Check error message is displayed
       expect(find.text('Email cannot be empty'), findsOneWidget);
     });
   });
