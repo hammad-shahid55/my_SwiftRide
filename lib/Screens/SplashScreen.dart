@@ -73,7 +73,7 @@ class _SplashScreenState extends State<SplashScreen>
     });
   }
 
-  /// Check internet + location + first time + login + navigate
+  /// Check internet + first time + location + login + navigate
   Future<void> _checkInternetAndNavigate() async {
     final connectivityResult = await Connectivity().checkConnectivity();
     final hasInternet = connectivityResult != ConnectivityResult.none;
@@ -103,7 +103,26 @@ class _SplashScreenState extends State<SplashScreen>
         return;
       }
 
-      // Check if user is logged in
+      // Location check for ALL users (logged in or not)
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      LocationPermission permission = await Geolocator.checkPermission();
+
+      if (!serviceEnabled || 
+          (permission != LocationPermission.always &&
+              permission != LocationPermission.whileInUse)) {
+        // Location not enabled or permission not granted → go to EnableLocationScreen
+        if (mounted) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const EnableLocationScreen(),
+            ),
+          );
+        }
+        return;
+      }
+
+      // Location is enabled and permission granted → proceed with login check
       final user = Supabase.instance.client.auth.currentUser;
       if (user != null) {
         // Logged in → go to HomeScreen
@@ -113,29 +132,12 @@ class _SplashScreenState extends State<SplashScreen>
             MaterialPageRoute(builder: (context) => const HomeScreen()),
           );
         }
-        return;
-      }
-
-      // Location check for new or logged out users
-      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
-      LocationPermission permission = await Geolocator.checkPermission();
-
-      if (serviceEnabled &&
-          (permission == LocationPermission.always ||
-              permission == LocationPermission.whileInUse)) {
+      } else {
+        // Not logged in → go to WelcomeScreen
         if (mounted) {
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(builder: (context) => const WelcomeScreen()),
-          );
-        }
-      } else {
-        if (mounted) {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(
-              builder: (context) => const EnableLocationScreen(),
-            ),
           );
         }
       }

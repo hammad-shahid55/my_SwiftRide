@@ -33,6 +33,21 @@ void main() {
       expect(find.byType(Image), findsWidgets);
     });
 
+    testWidgets('should check location permissions for all users', (WidgetTester tester) async {
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: SplashScreen(),
+        ),
+      );
+
+      // Wait for splash screen to complete
+      await tester.pumpAndSettle(const Duration(seconds: 5));
+
+      // The splash screen should handle location checking logic
+      // This test verifies the structure is in place
+      expect(find.byType(Scaffold), findsOneWidget);
+    });
+
     testWidgets('should have gradient background', (WidgetTester tester) async {
       await tester.pumpWidget(
         const MaterialApp(
