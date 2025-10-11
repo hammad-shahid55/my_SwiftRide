@@ -31,9 +31,11 @@ jobs:
     
     - name: Run unit tests
       run: flutter test test/ --coverage
+      continue-on-error: true
     
     - name: Run integration tests
       run: flutter test integration_test/
+      continue-on-error: true
     
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v4

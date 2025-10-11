@@ -42,7 +42,7 @@ dev_dependencies:
 
 flutter_native_splash:
   color: "#FD5858"
-  image: assets/ic_launcher.png
+  image: assets/van_logo.png
   android: true
   ios: true
   web: true
@@ -51,7 +51,6 @@ flutter:
   uses-material-design: true
 
   assets:
-    - .env
     - assets/google_logo.png
     - assets/apple.png
     - assets/van_logo.png
@@ -60,8 +59,8 @@ flutter:
     - assets/onboarding_3.png
     - assets/map.png
     - assets/welcome.png
-    - assets/pick.png
-    - assets/drop.png
+    - assets/pick.PNG
+    - assets/drop.PNG
     - assets/map_style_light.json
     - assets/map_style_dark.json
 
