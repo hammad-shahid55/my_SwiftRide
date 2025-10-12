@@ -8,6 +8,7 @@ Swift Ride is a comprehensive cross-platform ride booking and management system,
 - **Stripe Integration** - Secure payment processing and wallet management
 - **Google Maps Integration** - Route planning, location services, and navigation
 - **Email Notification System** - Automated email notifications via Resend API for booking confirmations, cancellations, and completions
+- **Driver Trip History System** - Complete trip assignment history with booking details for drivers
 - **Multi-platform Support** - Android, iOS, Web, and Desktop builds
 
 This guide covers setup, configuration, architecture, and every screen/page in sequence with complete documentation.
@@ -202,6 +203,7 @@ my_SwiftRide/
 │   │   ├── UserProfileScreen.dart
 │   │   ├── SettingsScreen.dart
 │   │   ├── BecomeDriverScreen.dart
+│   │   ├── TripHistoryScreen.dart
 │   │   ├── ContactUsScreen.dart
 │   │   └── ... (7 more screens)
 │   ├── Services/                 # Business logic services (5 files)
@@ -703,9 +705,61 @@ await SimpleEmailService.sendAccountDeletionConfirmation(
 - `location_history`: recent locations
 - `trips`: all available trips
 - `bookings`: user bookings with email notification triggers
+- `drivers`: driver profiles and information
+- `vans`: vehicle information and details
 - Edge function: `create-payment-intent` (Stripe)
 - RPC: `increment_wallet` (wallet top-up)
 - Email services: Automated notifications for booking confirmations, cancellations, and completions
+
+### Trip Assignment History Queries
+
+For the new TripHistoryScreen feature, use these SQL queries in Supabase:
+
+```sql
+-- Main query for trip assignment history with van and driver details
+SELECT 
+  t.id,
+  t."from",
+  t."to", 
+  t.depart_time,
+  t.arrive_time,
+  t.type,
+  t.ac,
+  t.total_seats,
+  t.driver_id,
+  t.van_id,
+  v.name as van_name,
+  v.plate as van_plate,
+  d.full_name as driver_name,
+  d.phone as driver_phone
+FROM public.trips t
+LEFT JOIN public.vans v ON t.van_id = v.id
+LEFT JOIN public.drivers d ON t.driver_id = d.id
+WHERE (t.driver_id = $1 OR t.driver_id IS NULL)
+ORDER BY t.depart_time DESC 
+LIMIT 50;
+```
+
+### Row Level Security (RLS) Policies
+
+```sql
+-- Enable RLS on trips table
+ALTER TABLE public.trips ENABLE ROW LEVEL SECURITY;
+
+-- Policy for drivers to view their trips and unassigned trips
+CREATE POLICY "Drivers can view their trips and unassigned trips" ON public.trips
+FOR SELECT USING (
+  driver_id = auth.uid() OR 
+  driver_id IS NULL
+);
+
+-- Policy for drivers to assign themselves to unassigned trips
+CREATE POLICY "Drivers can assign themselves to unassigned trips" ON public.trips
+FOR UPDATE USING (
+  driver_id IS NULL AND 
+  auth.uid() IN (SELECT id FROM public.drivers)
+);
+```
 
 ---
 
@@ -734,7 +788,8 @@ await SimpleEmailService.sendAccountDeletionConfirmation(
 | `TermsAndConditionsScreen.dart` | Legal info                                                       |
 | `PrivacyPolicyScreen.dart`      | Legal info                                                       |
 | `SetLocationMapScreen.dart`     | Map-based location picker                                        |
-| `BecomeDriverScreen.dart`       | Driver onboarding                                                |
+| `BecomeDriverScreen.dart`       | Driver dashboard and trip management                             |
+| `TripHistoryScreen.dart`        | Trip assignment history and booking details for drivers          |
 | `ContactUsScreen.dart`          | Contact/help info with complaint submission and automated email notifications |
 
 ---
@@ -2033,17 +2088,33 @@ This section provides detailed information about how each screen functions in th
 - Sends account deletion confirmation email via Resend API
 
 #### **20. BecomeDriverScreen.dart**
-**Purpose**: Driver onboarding
+**Purpose**: Driver dashboard and trip management
 **How it works**:
-- Driver registration form
-- License number input
-- Vehicle information
-- Document upload using `image_picker`
-- Driver verification process
-- Status tracking
-- Driver dashboard access
+- Driver profile creation and management
+- Trip assignment system with real-time updates
+- Van selection and assignment for trips
+- Weekly trip view with tabbed interface (Today, Mon, Tue, etc.)
+- Seat availability tracking with visual indicators
+- Booking status monitoring (booked, completed)
+- **Trip Assignment History**: Access to complete trip history with booking details
+- Refresh functionality for real-time data updates
+- Driver authentication and profile validation
 
-#### **21. ContactUsScreen.dart**
+#### **21. TripHistoryScreen.dart**
+**Purpose**: Trip assignment history and booking details for drivers
+**How it works**:
+- Displays all trips assigned to the current driver
+- Shows complete booking details for each trip in table format
+- Trip information table: ID, From, To, Depart, Arrive
+- Booking details table: ID, Trip, User, Seats, Status
+- Color-coded status indicators (Green: completed, Red: cancelled, Blue: booked)
+- Real-time data fetching with refresh functionality
+- Same data format as admin web driver details page
+- Monospace font for user IDs (matching admin web design)
+- Pull-to-refresh and manual refresh button
+- Empty state handling with helpful messages
+
+#### **22. ContactUsScreen.dart**
 **Purpose**: Support and contact information with complaint submission and automated email notifications
 **How it works**:
 - Contact information display
@@ -2055,7 +2126,7 @@ This section provides detailed information about how each screen functions in th
 - Office address and hours
 - Automatic email confirmation for complaints using professional HTML templates
 
-#### **22. PrivacyPolicyScreen.dart & TermsAndConditionsScreen.dart**
+#### **23. PrivacyPolicyScreen.dart & TermsAndConditionsScreen.dart**
 **Purpose**: Legal information display
 **How it works**:
 - Static legal content
@@ -2269,27 +2340,6 @@ create table if not exists public.trips (
 create index if not exists trips_depart_time_idx on public.trips(depart_time);
 ```
 
-## Feature Overview
-
-### Screens (high-level)
-
-- `SplashScreen`: initial loading and app bootstrapping
-- `OnBoardingScreen`: onboarding flow
-- `SignInScreen`, `SignUpScreen`: authentication UI
-- `HomeScreen`: main entry after auth
-- `TripSelectionScreen`: choose or configure a trip
-- `HistoryScreen`: user trip history
-- `WalletScreen`: payment/wallet interface
-- `BecomeDriverScreen`: driver onboarding/start
-- Additional screens for profile, settings, location permissions, and legal pages
-
-### Widgets (reusable)
-
-- `BookingWidget`: booking UI elements
-- `CustomTextField`, `PasswordFields`: form inputs
-- `MainButton`, `custom_button`: CTA buttons
-- `LoadingDialog`: global loading overlay
-- `theme.dart`: color palette and styling helpers
 
 ## Building & Release
 
@@ -2330,55 +2380,6 @@ flutter build web
 
 If you need deeper guidance for any specific screen/flow, ask and I’ll add a focused section.
 
-## Data Model and Database Logic
-
-This app uses Supabase (Postgres + RLS). Based on current code usage, these tables and functions are expected:
-
-- `profiles`
-
-  - `id uuid primary key` (matches `auth.users.id`)
-  - `name text`
-  - `wallet_balance numeric default 0`
-  - `updated_at timestamptz default now()`
-  - Used in `HomeScreen` to display name and in `WalletScreen` to read balance.
-
-- `location_history`
-
-  - `id uuid primary key default gen_random_uuid()`
-  - `user_id uuid references auth.users(id)`
-  - `address text`
-  - `inserted_at timestamptz default now()`
-  - Logic: when user selects a location, an entry is inserted or its `inserted_at` is updated; list is limited or toggled via “View All”.
-
-- `trips`
-
-  - `id uuid primary key default gen_random_uuid()`
-  - `from_city text not null`
-  - `to_city text not null`
-  - `depart_time timestamptz not null`
-  - `arrive_time timestamptz not null`
-  - `price numeric not null`
-  - `total_seats int not null`
-  - Optional UI fields the app reads if present: `distance_text text`, `duration_text text`, `type text`, `ac boolean`
-  - Logic: queried in `TripSelectionScreen` for both directions (A→B and B→A), grouped by next 7 days and filtered for “Today” to future times.
-
-- `bookings`
-
-  - Suggested fields (inferred from UI):
-    - `id uuid primary key default gen_random_uuid()`
-    - `user_id uuid references auth.users(id)`
-    - `from_city text`, `to_city text`
-    - `seats int`
-    - `total_price numeric`
-    - `status text` (e.g., pending, confirmed, completed, cancelled)
-    - `created_at timestamptz default now()`
-  - Logic: `HomeScreen` reads completed bookings for the current user to show history.
-
-- RPCs / Edge Functions
-  - Edge function `create-payment-intent` (called by mobile app) returns Stripe PaymentIntent client secret.
-  - RPC `increment_wallet(user_id uuid, amount numeric)` increments `profiles.wallet_balance` server-side after Stripe payment.
-
-RLS: Start permissive for prototyping; restrict by `auth.uid()` in production.
 
 ## Maps and Routing
 
@@ -2496,145 +2497,6 @@ create index if not exists trips_route_time_idx on public.trips(from_city, to_ci
 - Enable RLS on all tables; restrict reads/writes by `auth.uid()` where appropriate.
 - Use Edge Functions or Postgres RPCs for sensitive operations (payments, wallet mutation).
 
-## Admin Web (overview)
-
-The `admin_web` folder contains a complete React/TypeScript admin dashboard that connects to the same Supabase backend as the Flutter app.
-
-### Stack
-
-- React + TypeScript + Vite
-- `@supabase/supabase-js` client
-
-### Environment
-
-- Create `admin_web/.env` with:
-
-```
-VITE_SUPABASE_URL=your_supabase_url
-VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
-```
-
-### Client creation (example)
-
-```ts
-import { createClient } from "@supabase/supabase-js";
-const client = createClient(
-  import.meta.env.VITE_SUPABASE_URL!,
-  import.meta.env.VITE_SUPABASE_ANON_KEY!
-);
-```
-
-### Routing/pages (intended)
-
-- Dashboard: overall KPIs
-- Trips: list trips, create/edit/delete. Supports search by `from_city`/`to_city` and sort by `depart_time`.
-  - Insert adds a row to Supabase `trips` table used by the Flutter app.
-  - Search: `or(from_city.ilike.%q%,to_city.ilike.%q%)` with debounce.
-- Drivers: manage driver records
-- DriverDetail: view a specific driver by id
-- Users: manage end users
-- Payments: monitor and reconcile wallet top-ups
-- Bookings: manage customer bookings
-
-### Data contract shared with Flutter
-
-- Writes to and reads from the same `trips`, `bookings`, and auxiliary tables described above. Creating a trip in Admin makes it visible in the app’s `TripSelectionScreen` immediately.
 
 ---
 
-## Full Screen Reference (Flutter)
-
-Below is a concise inventory of all screens under `lib/Screens` with their role and key logic. Use this as a map to the codebase.
-
-- `AccountActionsScreen.dart`
-
-  - Entry to account-related flows (profile, password, logout shortcuts).
-
-- `BecomeDriverScreen.dart`
-
-  - Driver onboarding entry. Typically collects driver info/documents before enabling driver features.
-
-- `ContactUsScreen.dart`
-
-  - Static contact/help information, potentially with mail/tap-to-call actions.
-
-- `DirectionsMapScreen.dart`
-
-  - Renders Google Map route between selected addresses.
-  - Geocodes addresses, fetches Google Directions, decodes polylines, shows pickup/dropoff markers.
-  - Overlays `BookingWidget` to proceed with booking/payment.
-
-- `EnableLocationScreen.dart`
-
-  - Guides user to enable location services and grant permissions (uses `geolocator`).
-
-- `ForgotPasswordScreen.dart`
-
-  - Password reset flow via Supabase auth (email-based in typical setups).
-
-- `HistoryScreen.dart`
-
-  - Displays user’s past rides; reads from `bookings` where `status = 'completed'`.
-
-- `HomeScreen.dart`
-
-  - Loads `profiles.name`, recent `location_history`, and completed `bookings` via Supabase.
-  - Quick address entry opens `LocationSelectionScreen`; chips for recent history provide shortcuts.
-  - Handles logout and drawer-driven navigation.
-
-- `LocationSelectionScreen.dart`
-
-  - Search/address entry UI. On selection, persists into `location_history` (dedupe + timestamp bump).
-
-- `OnBoardingScreen.dart`
-
-  - First-time experience; set by `SplashScreen` using a `SharedPreferences` flag.
-
-- `PhoneNumberSignUpScreen.dart`
-
-  - Phone-number-based registration UX (UI scaffolding; wire to Supabase OTP if required).
-
-- `PrivacyPolicyScreen.dart`
-
-  - Static legal content display.
-
-- `SetLocationMapScreen.dart`
-
-  - Map-based picker allowing the user to select/set a location.
-
-- `SettingsScreen.dart`
-
-  - App preferences; could include theme, notifications, and privacy.
-
-- `SignInScreen.dart`
-
-  - User login UI wired to Supabase auth.
-
-- `SignUpScreen.dart`
-
-  - Registration UI wired to Supabase auth.
-
-- `SplashScreen.dart`
-
-  - Animated splash. Connectivity check, first-run detection, auth-state check, and location permission routing.
-
-- `TermsAndConditionsScreen.dart`
-
-  - Static legal content display.
-
-- `TripSelectionScreen.dart`
-
-  - Fetches `trips` for both directions (A→B and B→A), grouped for the next 7 days.
-  - For Today, filters out departures earlier than now; formats times; shows price, seats, distance/duration fields if provided.
-  - Navigates to `DirectionsMapScreen` with selected trip.
-
-- `UserProfileScreen.dart`
-
-  - Shows and edits user profile info stored in `profiles`.
-
-- `WalletScreen.dart`
-
-  - Stripe PaymentSheet top-up; on success, calls Supabase RPC to increment wallet and refreshes balance.
-
-- `WelcomeScreen.dart`
-  - Landing for unauthenticated users; routes to sign-in or location permission flow as needed.
