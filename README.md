@@ -35,7 +35,7 @@ This guide covers setup, configuration, architecture, and every screen/page in s
 
 ---
 
-## 1. Prerequisites
+## 1. Prerequisites 
 
 ### Development Environment
 - **Flutter SDK** (3.7+) with Dart SDK (bundled)
@@ -132,6 +132,15 @@ STRIPE_PUBLISHABLE_KEY=pk_test_your_stripe_publishable_key
 GOOGLE_MAPS_API_KEY=your_google_maps_api_key
 GOOGLE_SIGN_IN_CLIENT_ID=your_google_oauth_client_id
 
+# Email Service Configuration (Resend)
+RESEND_API_KEY=re_your_resend_api_key
+RESEND_FROM_EMAIL=onboarding@resend.dev
+
+# App Configuration
+APP_NAME=SwiftRide
+COMPANY_NAME=SwiftRide
+SUPPORT_EMAIL=support@swiftride.com
+
 # Optional: Development flags
 DEBUG_MODE=true
 LOG_LEVEL=debug
@@ -160,6 +169,11 @@ VITE_DEBUG_MODE=true
 | `STRIPE_PUBLISHABLE_KEY` | Stripe publishable key | ✅ | Flutter |
 | `GOOGLE_MAPS_API_KEY` | Google Maps API key | ✅ | Flutter |
 | `GOOGLE_SIGN_IN_CLIENT_ID` | Google OAuth client ID | ✅ | Flutter |
+| `RESEND_API_KEY` | Resend email service API key | ✅ | Flutter |
+| `RESEND_FROM_EMAIL` | Resend sender email address | ✅ | Flutter |
+| `APP_NAME` | Application name for emails | ✅ | Flutter |
+| `COMPANY_NAME` | Company name for branding | ✅ | Flutter |
+| `SUPPORT_EMAIL` | Support email address | ✅ | Flutter |
 | `VITE_SUPABASE_URL` | Supabase project URL | ✅ | Admin Web |
 | `VITE_SUPABASE_ANON_KEY` | Supabase anonymous key | ✅ | Admin Web |
 | `VITE_GOOGLE_MAPS_API_KEY` | Google Maps API key | ✅ | Admin Web |
@@ -187,7 +201,13 @@ my_SwiftRide/
 │   │   ├── UserProfileScreen.dart
 │   │   ├── SettingsScreen.dart
 │   │   ├── BecomeDriverScreen.dart
-│   │   └── ... (8 more screens)
+│   │   ├── ContactUsScreen.dart
+│   │   └── ... (7 more screens)
+│   ├── Services/                 # Business logic services (4 files)
+│   │   ├── EmailConfig.dart      # Email service configuration
+│   │   ├── SimpleEmailService.dart # Email sending service
+│   │   ├── BookingStatusService.dart # Booking status management
+│   │   └── AutoCompletionService.dart # Auto-completion logic
 │   └── Widgets/                  # Reusable UI components (16 files)
 │       ├── theme.dart
 │       ├── BookingWidget.dart
@@ -345,6 +365,260 @@ void main() async {
 - Stripe: PaymentSheet for wallet top-up
 - Google Maps: Route, distance, and location features
 
+## 7.1. Email Notification System
+
+SwiftRide includes a comprehensive email notification system powered by Resend API for automated user communications.
+
+### 📧 Email Features
+
+#### **1. Booking Confirmation Emails**
+- **Trigger**: When user successfully books a ride
+- **Content**: Trip details, seat information, total price, full addresses
+- **Template**: Professional HTML with SwiftRide branding
+- **Includes**: From/To cities with full addresses, booking ID, ride time
+
+#### **2. Booking Cancellation Emails**
+- **Trigger**: When user cancels booking from History screen
+- **Content**: Cancellation confirmation with refund information
+- **Template**: Red-themed HTML with cancellation details
+- **Includes**: Original booking details, cancellation reason, refund timeline
+
+#### **3. Ride Completion Emails**
+- **Trigger**: Automatically when ride time passes
+- **Content**: Completion confirmation with thank you message
+- **Template**: Green-themed HTML with completion details
+- **Includes**: Trip summary, rating request, next booking encouragement
+
+#### **4. Complaint Confirmation Emails**
+- **Trigger**: When user submits complaint via Contact Us
+- **Content**: Complaint acknowledgment with tracking ID
+- **Template**: Professional HTML with support information
+- **Includes**: Complaint details, tracking ID, resolution timeline
+
+### 🔧 Email Service Architecture
+
+#### **EmailConfig.dart**
+- Centralized email service configuration
+- Resend API integration
+- Environment variable support (.env file)
+- Fallback configuration options
+
+#### **SimpleEmailService.dart**
+- Core email sending functionality
+- HTML template generation
+- Resend API integration
+- Error handling and fallback logging
+
+#### **BookingStatusService.dart**
+- Booking status management
+- Email trigger coordination
+- User profile integration
+- Database status updates
+
+#### **AutoCompletionService.dart**
+- Automatic ride completion detection
+- Background email processing
+- User-specific completion checks
+- Time-based completion logic
+
+### 📧 Email Templates
+
+All emails use professional HTML templates with:
+- **SwiftRide branding** with gradient headers
+- **Responsive design** for mobile and desktop
+- **Clear information hierarchy** with icons and sections
+- **Call-to-action buttons** for user engagement
+- **Contact information** for support
+
+### 🚀 Email Flow Integration
+
+#### **Booking Flow**
+1. User books ride → `BookingWidget.dart`
+2. Booking saved to database
+3. `SimpleEmailService.sendBookingConfirmation()` called
+4. Email sent via Resend API
+5. User receives confirmation email
+
+#### **Cancellation Flow**
+1. User cancels from `HistoryScreen.dart`
+2. `BookingStatusService.cancelBooking()` called
+3. Status updated in database
+4. `SimpleEmailService.sendBookingCancellation()` called
+5. User receives cancellation email
+
+#### **Auto-Completion Flow**
+1. App starts or user opens screens
+2. `AutoCompletionService.checkAndAutoCompleteRides()` called
+3. Checks for rides past their scheduled time
+4. `SimpleEmailService.sendBookingCompletion()` called
+5. User receives completion email
+
+#### **Complaint Flow**
+1. User submits complaint via `ContactUsScreen.dart`
+2. Complaint saved to database
+3. `SimpleEmailService.sendComplaintConfirmation()` called
+4. User receives complaint confirmation email
+
+### 🔧 Configuration
+
+#### **Environment Variables**
+```env
+# Resend Email Service
+RESEND_API_KEY=re_your_resend_api_key
+RESEND_FROM_EMAIL=onboarding@resend.dev
+
+# App Configuration
+APP_NAME=SwiftRide
+COMPANY_NAME=SwiftRide
+SUPPORT_EMAIL=support@swiftride.com
+```
+
+#### **Resend Setup**
+1. Create account at [resend.com](https://resend.com)
+2. Get API key from dashboard
+3. Verify domain or use test domain
+4. Add API key to `.env` file
+5. Test email functionality
+
+### 📊 Email Monitoring
+
+#### **Success Indicators**
+- ✅ Email sent successfully via Resend API
+- ✅ User receives email in inbox
+- ✅ Professional HTML rendering
+- ✅ All booking details included
+
+#### **Fallback Handling**
+- ⚠️ Email service not configured → Console logging
+- ⚠️ API failure → Fallback logging with details
+- ⚠️ Network issues → Retry mechanism
+- ⚠️ Invalid email → Error handling
+
+### 🎯 Email Content Examples
+
+#### **Booking Confirmation**
+```
+Subject: Booking Confirmed - SwiftRide
+
+Hello John Doe! 👋
+
+Your ride has been successfully booked!
+
+📍 From: Karachi - Karachi Airport Terminal 1
+🎯 To: Lahore - Lahore Railway Station
+💺 Seats: 2
+💰 Total Price: 5000 PKR
+⏰ Ride Time: 15 Jan 2024 at 14:30
+📱 Booking ID: BK-1703123456789
+
+📱 What's Next?
+• Arrive at pickup location 10 minutes early
+• Show booking ID to driver
+• Enjoy your comfortable ride
+```
+
+#### **Cancellation Confirmation**
+```
+Subject: Booking Cancelled - SwiftRide
+
+Hello John Doe! 👋
+
+Your booking has been cancelled successfully.
+
+📍 From: Karachi - Karachi Airport Terminal 1
+🎯 To: Lahore - Lahore Railway Station
+💺 Seats: 2
+💰 Total Price: 5000 PKR
+⏰ Ride Time: 15 Jan 2024 at 14:30
+
+📱 What's Next?
+• Your payment will be refunded within 3-5 business days
+• You can book another ride anytime
+• Contact support if you have any questions
+```
+
+#### **Ride Completion**
+```
+Subject: Ride Completed - SwiftRide
+
+Hello John Doe! 👋
+
+Great news! Your ride has been completed successfully.
+
+📍 From: Karachi - Karachi Airport Terminal 1
+🎯 To: Lahore - Lahore Railway Station
+💺 Seats: 2
+💰 Total Price: 5000 PKR
+⏰ Ride Time: 15 Jan 2024 at 14:30
+
+📱 Thank You!
+• We hope you had a comfortable and safe journey
+• Please rate your experience in the app
+• Book your next ride anytime
+```
+
+#### **Complaint Confirmation**
+```
+Subject: Complaint Received - SwiftRide
+
+Hello John Doe! 👋
+
+Thank you for reaching out to us. We have received your complaint and our team is already working on it.
+
+📋 Your Complaint:
+"Driver was late and the car was not clean. Very disappointed with the service."
+
+📱 What happens next?
+• Immediate: Your complaint has been logged with ID #COMP-1703123456789
+• Within 24 hours: Our support team will review your complaint
+• Within 48 hours: We will contact you with a response or solution
+• Follow-up: We will ensure your issue is completely resolved
+```
+
+### 🔄 Email Service Status
+
+#### **Configuration Check**
+The app automatically checks email configuration on startup:
+```
+📧 EMAIL CONFIGURATION STATUS
+================================
+Status: ✅ Email service configured: resend
+Valid: ✅ Yes
+Service: resend
+================================
+```
+
+#### **Testing Email Service**
+```dart
+// Test all email types
+await SimpleEmailService.testEmailService();
+
+// Test specific email type
+await SimpleEmailService.sendBookingConfirmation(
+  userEmail: 'test@example.com',
+  userName: 'Test User',
+  fromCity: 'Karachi',
+  toCity: 'Lahore',
+  seats: 2,
+  totalPrice: 5000,
+  rideTime: DateTime.now().add(Duration(days: 1)).toIso8601String(),
+  bookingId: 'TEST-${DateTime.now().millisecondsSinceEpoch}',
+  fromAddress: 'Karachi Airport Terminal 1',
+  toAddress: 'Lahore Railway Station',
+);
+```
+
+### 🎉 Email System Benefits
+
+- **Professional Communication**: Branded emails with consistent messaging
+- **User Engagement**: Clear information and next steps
+- **Automated Workflows**: No manual intervention required
+- **Comprehensive Coverage**: All major user actions covered
+- **Reliable Delivery**: Resend API ensures high deliverability
+- **Mobile Optimized**: Responsive HTML templates
+- **Error Handling**: Graceful fallbacks and logging
+- **Easy Configuration**: Simple environment variable setup
+
 ---
 
 ## 8. Data Model & Database Logic
@@ -384,7 +658,7 @@ void main() async {
 | `PrivacyPolicyScreen.dart`      | Legal info                                                       |
 | `SetLocationMapScreen.dart`     | Map-based location picker                                        |
 | `BecomeDriverScreen.dart`       | Driver onboarding                                                |
-| `ContactUsScreen.dart`          | Contact/help info                                                |
+| `ContactUsScreen.dart`          | Contact/help info with complaint submission and email notifications |
 
 ---
 
@@ -752,6 +1026,21 @@ flutter test test/widget_test/
 flutter test test/widget_test/main_button_test.dart
 ```
 
+#### Email Service Tests
+```bash
+# Test email configuration
+flutter test test/email_test.dart
+
+# Test email service functionality
+flutter test test/services/email_service_test.dart
+
+# Test booking status service
+flutter test test/services/booking_status_test.dart
+
+# Test auto-completion service
+flutter test test/services/auto_completion_test.dart
+```
+
 ### 📁 Test Structure
 
 ```
@@ -764,12 +1053,18 @@ test/
 │   ├── splash_screen_test.dart        ✅ Ready
 │   ├── sign_in_screen_test.dart       ✅ Ready
 │   └── test_runner.dart               ✅ Ready
+├── services/             # Service unit tests
+│   ├── email_service_test.dart        ✅ Ready
+│   ├── booking_status_test.dart       ✅ Ready
+│   └── auto_completion_test.dart      ✅ Ready
+├── email_test.dart       # Email configuration tests
 ├── test_config.dart      # Test configuration and utilities
 └── README.md            # Detailed testing guide
 
 integration_test/
 ├── app_test.dart         # Main E2E tests
-└── driver_flow_test.dart # Driver-specific E2E tests
+├── driver_flow_test.dart # Driver-specific E2E tests
+└── email_flow_test.dart  # Email notification E2E tests
 ```
 
 ### 📋 Test Categories & Coverage
@@ -806,6 +1101,12 @@ integration_test/
 #### Integration Tests ✅
 - **App Flow**: Tests complete user journeys from app launch to key features
 - **Driver Flow**: Tests driver-specific functionality and registration
+- **Email Flow**: Tests email notification workflows and delivery
+
+#### Service Tests ✅
+- **Email Service Tests**: Email configuration, sending, and template generation
+- **Booking Status Tests**: Status management and email trigger coordination
+- **Auto-Completion Tests**: Automatic ride completion detection and email sending
 
 ### 🎯 Test Coverage Areas
 
@@ -816,6 +1117,9 @@ integration_test/
 - ✅ Error handling and edge cases
 - ✅ Styling and theming
 - ✅ State management
+- ✅ Email notification system
+- ✅ Booking status management
+- ✅ Auto-completion logic
 
 #### Test Reliability
 - ✅ All tests are deterministic
@@ -975,6 +1279,34 @@ echo $GOOGLE_MAPS_API_KEY
 - Enable Places API
 - Enable Directions API
 - Configure API key restrictions
+
+#### Email Notifications Not Working
+
+**Symptoms**: Users not receiving emails, email service errors
+**Solutions**:
+```bash
+# Check email configuration
+echo $RESEND_API_KEY
+echo $RESEND_FROM_EMAIL
+
+# Verify Resend API key is valid
+# Check Resend dashboard for delivery status
+# Ensure domain is verified in Resend
+```
+
+**Common Issues**:
+- Invalid or expired Resend API key
+- Unverified sender domain
+- Email service not configured in .env
+- Network connectivity to Resend API
+- Email going to spam folder
+
+**Debug Steps**:
+1. Check console for email configuration status
+2. Verify .env file has correct Resend API key
+3. Test email service with test function
+4. Check Resend dashboard for delivery logs
+5. Verify sender email domain is verified
 
 #### Build Failures
 
@@ -1394,6 +1726,9 @@ This comprehensive documentation covers every aspect of the Swift Ride project, 
 - **Complete backend integration** with Supabase
 - **Payment processing** with Stripe
 - **Location services** with Google Maps
+- **Comprehensive email notification system** with Resend API
+- **Automated booking workflows** with email confirmations
+- **Professional email templates** with SwiftRide branding
 - **Security best practices** and deployment strategies
 
 For any specific implementation details, refer to the corresponding source files in the project structure. This documentation serves as a complete guide for development, deployment, and maintenance of the Swift Ride application.
@@ -1627,14 +1962,16 @@ This section provides detailed information about how each screen functions in th
 - Driver dashboard access
 
 #### **21. ContactUsScreen.dart**
-**Purpose**: Support and contact information
+**Purpose**: Support and contact information with complaint submission
 **How it works**:
 - Contact information display
 - Email and phone number links
-- Support ticket creation
+- Complaint submission form with email notifications
+- Support ticket creation with tracking ID
 - FAQ section
 - Social media links
 - Office address and hours
+- Automatic email confirmation for complaints
 
 #### **22. PrivacyPolicyScreen.dart & TermsAndConditionsScreen.dart**
 **Purpose**: Legal information display
