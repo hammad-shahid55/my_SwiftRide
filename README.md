@@ -8,6 +8,7 @@ Swift Ride is a comprehensive cross-platform ride booking and management system,
 - **Stripe Integration** - Secure payment processing and wallet management
 - **Google Maps Integration** - Route planning, location services, and navigation
 - **Email Notification System** - Automated email notifications via Resend API for booking confirmations, cancellations, and completions
+- **Driver Trip History System** - Complete trip assignment history with booking details for drivers
 - **Multi-platform Support** - Android, iOS, Web, and Desktop builds
 
 This guide covers setup, configuration, architecture, and every screen/page in sequence with complete documentation.
@@ -202,6 +203,7 @@ my_SwiftRide/
 │   │   ├── UserProfileScreen.dart
 │   │   ├── SettingsScreen.dart
 │   │   ├── BecomeDriverScreen.dart
+│   │   ├── TripHistoryScreen.dart
 │   │   ├── ContactUsScreen.dart
 │   │   └── ... (7 more screens)
 │   ├── Services/                 # Business logic services (5 files)
@@ -703,9 +705,61 @@ await SimpleEmailService.sendAccountDeletionConfirmation(
 - `location_history`: recent locations
 - `trips`: all available trips
 - `bookings`: user bookings with email notification triggers
+- `drivers`: driver profiles and information
+- `vans`: vehicle information and details
 - Edge function: `create-payment-intent` (Stripe)
 - RPC: `increment_wallet` (wallet top-up)
 - Email services: Automated notifications for booking confirmations, cancellations, and completions
+
+### Trip Assignment History Queries
+
+For the new TripHistoryScreen feature, use these SQL queries in Supabase:
+
+```sql
+-- Main query for trip assignment history with van and driver details
+SELECT 
+  t.id,
+  t."from",
+  t."to", 
+  t.depart_time,
+  t.arrive_time,
+  t.type,
+  t.ac,
+  t.total_seats,
+  t.driver_id,
+  t.van_id,
+  v.name as van_name,
+  v.plate as van_plate,
+  d.full_name as driver_name,
+  d.phone as driver_phone
+FROM public.trips t
+LEFT JOIN public.vans v ON t.van_id = v.id
+LEFT JOIN public.drivers d ON t.driver_id = d.id
+WHERE (t.driver_id = $1 OR t.driver_id IS NULL)
+ORDER BY t.depart_time DESC 
+LIMIT 50;
+```
+
+### Row Level Security (RLS) Policies
+
+```sql
+-- Enable RLS on trips table
+ALTER TABLE public.trips ENABLE ROW LEVEL SECURITY;
+
+-- Policy for drivers to view their trips and unassigned trips
+CREATE POLICY "Drivers can view their trips and unassigned trips" ON public.trips
+FOR SELECT USING (
+  driver_id = auth.uid() OR 
+  driver_id IS NULL
+);
+
+-- Policy for drivers to assign themselves to unassigned trips
+CREATE POLICY "Drivers can assign themselves to unassigned trips" ON public.trips
+FOR UPDATE USING (
+  driver_id IS NULL AND 
+  auth.uid() IN (SELECT id FROM public.drivers)
+);
+```
 
 ---
 
@@ -734,7 +788,8 @@ await SimpleEmailService.sendAccountDeletionConfirmation(
 | `TermsAndConditionsScreen.dart` | Legal info                                                       |
 | `PrivacyPolicyScreen.dart`      | Legal info                                                       |
 | `SetLocationMapScreen.dart`     | Map-based location picker                                        |
-| `BecomeDriverScreen.dart`       | Driver onboarding                                                |
+| `BecomeDriverScreen.dart`       | Driver dashboard and trip management                             |
+| `TripHistoryScreen.dart`        | Trip assignment history and booking details for drivers          |
 | `ContactUsScreen.dart`          | Contact/help info with complaint submission and automated email notifications |
 
 ---
@@ -2033,17 +2088,33 @@ This section provides detailed information about how each screen functions in th
 - Sends account deletion confirmation email via Resend API
 
 #### **20. BecomeDriverScreen.dart**
-**Purpose**: Driver onboarding
+**Purpose**: Driver dashboard and trip management
 **How it works**:
-- Driver registration form
-- License number input
-- Vehicle information
-- Document upload using `image_picker`
-- Driver verification process
-- Status tracking
-- Driver dashboard access
+- Driver profile creation and management
+- Trip assignment system with real-time updates
+- Van selection and assignment for trips
+- Weekly trip view with tabbed interface (Today, Mon, Tue, etc.)
+- Seat availability tracking with visual indicators
+- Booking status monitoring (booked, completed)
+- **Trip Assignment History**: Access to complete trip history with booking details
+- Refresh functionality for real-time data updates
+- Driver authentication and profile validation
 
-#### **21. ContactUsScreen.dart**
+#### **21. TripHistoryScreen.dart**
+**Purpose**: Trip assignment history and booking details for drivers
+**How it works**:
+- Displays all trips assigned to the current driver
+- Shows complete booking details for each trip in table format
+- Trip information table: ID, From, To, Depart, Arrive
+- Booking details table: ID, Trip, User, Seats, Status
+- Color-coded status indicators (Green: completed, Red: cancelled, Blue: booked)
+- Real-time data fetching with refresh functionality
+- Same data format as admin web driver details page
+- Monospace font for user IDs (matching admin web design)
+- Pull-to-refresh and manual refresh button
+- Empty state handling with helpful messages
+
+#### **22. ContactUsScreen.dart**
 **Purpose**: Support and contact information with complaint submission and automated email notifications
 **How it works**:
 - Contact information display
@@ -2055,7 +2126,7 @@ This section provides detailed information about how each screen functions in th
 - Office address and hours
 - Automatic email confirmation for complaints using professional HTML templates
 
-#### **22. PrivacyPolicyScreen.dart & TermsAndConditionsScreen.dart**
+#### **23. PrivacyPolicyScreen.dart & TermsAndConditionsScreen.dart**
 **Purpose**: Legal information display
 **How it works**:
 - Static legal content

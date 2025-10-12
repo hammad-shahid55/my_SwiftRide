@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:swift_ride/Widgets/theme.dart';
 import 'package:swift_ride/Screens/SignInScreen.dart';
+import 'package:swift_ride/Screens/TripHistoryScreen.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'package:timezone/data/latest_all.dart' as tzdata;
 
@@ -250,6 +251,7 @@ class _BecomeDriverScreenState extends State<BecomeDriverScreen>
       );
     }
   }
+
 
   Widget _buildSignInPrompt() {
     return Center(
@@ -583,6 +585,14 @@ class _BecomeDriverScreenState extends State<BecomeDriverScreen>
           decoration: const BoxDecoration(gradient: AppTheme.mainGradient),
         ),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.history, color: Colors.white),
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const TripHistoryScreen()),
+            ),
+            tooltip: 'Trip Assignment History',
+          ),
           IconButton(
             icon: isRefreshing 
                 ? const SizedBox(
