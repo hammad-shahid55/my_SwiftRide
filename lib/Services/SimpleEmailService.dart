@@ -830,6 +830,136 @@ class SimpleEmailService {
     print('==========================================');
   }
 
+  /// Send complaint confirmation email using Resend
+  static Future<bool> _sendComplaintWithResend({
+    required String userEmail,
+    required String userName,
+    required String complaint,
+    required String complaintId,
+  }) async {
+    try {
+      final emailData = {
+        'from': EmailConfig.resendFromEmail,
+        'to': [userEmail],
+        'subject': 'Complaint Received - ${EmailConfig.appName}',
+        'html': _generateComplaintEmailHTML(
+          userName: userName,
+          complaint: complaint,
+          complaintId: complaintId,
+        ),
+      };
+
+      final response = await http.post(
+        Uri.parse('https://api.resend.com/emails'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ${EmailConfig.resendApiKey}',
+        },
+        body: json.encode(emailData),
+      );
+
+      if (response.statusCode == 200) {
+        print('✅ Complaint confirmation email sent to $userEmail via Resend');
+        return true;
+      } else {
+        print('❌ Failed to send complaint email via Resend: ${response.statusCode} - ${response.body}');
+        return false;
+      }
+    } catch (e) {
+      print('❌ Error sending complaint email with Resend: $e');
+      return false;
+    }
+  }
+
+  /// Generate complaint confirmation email HTML
+  static String _generateComplaintEmailHTML({
+    required String userName,
+    required String complaint,
+    required String complaintId,
+  }) {
+    return '''
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Complaint Received - ${EmailConfig.appName}</title>
+        <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; background-color: #f4f4f4; }
+            .container { max-width: 600px; margin: 0 auto; background-color: #ffffff; padding: 20px; border-radius: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+            .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; text-align: center; border-radius: 10px 10px 0 0; margin: -20px -20px 20px -20px; }
+            .header h1 { margin: 0; font-size: 24px; }
+            .content { padding: 20px 0; }
+            .complaint-box { background-color: #f8f9fa; border-left: 4px solid #667eea; padding: 15px; margin: 15px 0; border-radius: 5px; }
+            .complaint-text { font-style: italic; color: #555; }
+            .info-box { background-color: #e8f4fd; border: 1px solid #bee5eb; padding: 15px; border-radius: 5px; margin: 15px 0; }
+            .footer { text-align: center; padding: 20px 0; border-top: 1px solid #eee; margin-top: 20px; color: #666; font-size: 14px; }
+            .highlight { color: #667eea; font-weight: bold; }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="header">
+                <h1>📝 Complaint Received</h1>
+                <p>${EmailConfig.appName} Support Team</p>
+            </div>
+            
+            <div class="content">
+                <p>Hello <span class="highlight">$userName</span>! 👋</p>
+                
+                <p>Thank you for reaching out to us. We have received your complaint and our team is already working on it.</p>
+                
+                <div class="complaint-box">
+                    <h3>📋 Your Complaint:</h3>
+                    <p class="complaint-text">"$complaint"</p>
+                </div>
+                
+                <div class="info-box">
+                    <h3>📱 What happens next?</h3>
+                    <ul>
+                        <li><strong>Immediate:</strong> Your complaint has been logged with ID <span class="highlight">#$complaintId</span></li>
+                        <li><strong>Within 24 hours:</strong> Our support team will review your complaint</li>
+                        <li><strong>Within 48 hours:</strong> We will contact you with a response or solution</li>
+                        <li><strong>Follow-up:</strong> We will ensure your issue is completely resolved</li>
+                    </ul>
+                </div>
+                
+                <p>We take all complaints seriously and are committed to providing you with the best possible service.</p>
+                
+                <p>If you have any urgent concerns, please don't hesitate to contact us directly:</p>
+                <ul>
+                    <li>📧 Email: ${EmailConfig.supportEmail}</li>
+                    <li>📞 Phone: +92 300 1234567</li>
+                </ul>
+            </div>
+            
+            <div class="footer">
+                <p>Thank you for choosing <strong>${EmailConfig.appName}</strong>!</p>
+                <p>We appreciate your feedback and are here to help.</p>
+                <p><small>This is an automated message. Please do not reply to this email.</small></p>
+            </div>
+        </div>
+    </body>
+    </html>
+    ''';
+  }
+
+  /// Log complaint details (fallback when email service is not configured)
+  static void _logComplaintDetails({
+    required String userEmail,
+    required String userName,
+    required String complaint,
+    required String complaintId,
+  }) {
+    print('📧 COMPLAINT CONFIRMATION EMAIL (Fallback Log)');
+    print('==========================================');
+    print('To: $userEmail');
+    print('Name: $userName');
+    print('Complaint ID: #$complaintId');
+    print('Complaint: "$complaint"');
+    print('==========================================');
+  }
+
   /// Send booking cancellation email
   static Future<bool> sendBookingCancellation({
     required String userEmail,
@@ -929,6 +1059,37 @@ class SimpleEmailService {
       );
     } catch (e) {
       print('❌ Error sending completion email: $e');
+      return false;
+    }
+  }
+
+  /// Send complaint confirmation email to user
+  static Future<bool> sendComplaintConfirmation({
+    required String userEmail,
+    required String userName,
+    required String complaint,
+    required String complaintId,
+  }) async {
+    if (!EmailConfig.isEmailConfigured) {
+      print('⚠️ Email service not configured. Logging complaint details instead.');
+      _logComplaintDetails(
+        userEmail: userEmail,
+        userName: userName,
+        complaint: complaint,
+        complaintId: complaintId,
+      );
+      return false;
+    }
+
+    try {
+      return await _sendComplaintWithResend(
+        userEmail: userEmail,
+        userName: userName,
+        complaint: complaint,
+        complaintId: complaintId,
+      );
+    } catch (e) {
+      print('❌ Error sending complaint confirmation email: $e');
       return false;
     }
   }

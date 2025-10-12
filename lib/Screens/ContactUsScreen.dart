@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:swift_ride/Widgets/theme.dart';
+import 'package:swift_ride/Services/SimpleEmailService.dart';
 
 class ContactUsScreen extends StatefulWidget {
   const ContactUsScreen({super.key});
@@ -92,21 +93,80 @@ class _ContactUsScreenState extends State<ContactUsScreen>
       return;
     }
 
+    // Show loading dialog
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(
+        child: CircularProgressIndicator(),
+      ),
+    );
+
     try {
-      await supabase.from("complaints").insert({
+      // Insert complaint into database
+      final response = await supabase.from("complaints").insert({
         "user_id": user.id,
         "email": user.email,
         "complaint": complaint,
-      });
+      }).select();
+
+      // Get the complaint ID from the response
+      String complaintId = 'COMP-${DateTime.now().millisecondsSinceEpoch}';
+      if (response.isNotEmpty) {
+        complaintId = response.first['id']?.toString() ?? complaintId;
+      }
+
+      // Get user profile for email
+      String userName = 'User';
+      try {
+        final profileResponse = await supabase
+            .from('profiles')
+            .select('full_name')
+            .eq('id', user.id)
+            .maybeSingle();
+        
+        if (profileResponse != null && profileResponse['full_name'] != null) {
+          userName = profileResponse['full_name'] as String;
+        }
+      } catch (e) {
+        print('Error fetching user profile: $e');
+      }
+
+      // Send email notification
+      if (user.email != null && user.email!.isNotEmpty) {
+        try {
+          final emailSent = await SimpleEmailService.sendComplaintConfirmation(
+            userEmail: user.email!,
+            userName: userName,
+            complaint: complaint,
+            complaintId: complaintId,
+          );
+
+          if (emailSent) {
+            print('✅ Complaint confirmation email sent successfully');
+          } else {
+            print('⚠️ Complaint confirmation email failed, but complaint was submitted');
+          }
+        } catch (e) {
+          print('❌ Error sending complaint confirmation email: $e');
+          // Don't fail the complaint submission if email fails
+        }
+      }
+
+      // Close loading dialog
+      Navigator.pop(context);
 
       complaintController.clear();
 
       _showAnimatedDialog(
         title: "Success",
-        message: "Your complaint has been submitted successfully.",
+        message: "Your complaint has been submitted successfully. Check your email for confirmation!",
         isSuccess: true,
       );
     } catch (e) {
+      // Close loading dialog
+      Navigator.pop(context);
+      
       _showAnimatedDialog(
         title: "Error",
         message: "Failed to submit complaint: $e",
