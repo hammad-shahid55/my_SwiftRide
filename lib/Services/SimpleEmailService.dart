@@ -1094,6 +1094,193 @@ class SimpleEmailService {
     }
   }
 
+  /// Send account deletion confirmation email
+  static Future<bool> sendAccountDeletionConfirmation({
+    required String userEmail,
+    required String userName,
+  }) async {
+    if (!EmailConfig.isEmailConfigured) {
+      print('⚠️ Email service not configured. Logging account deletion details instead.');
+      _logAccountDeletionDetails(
+        userEmail: userEmail,
+        userName: userName,
+      );
+      return false;
+    }
+
+    try {
+      return await _sendAccountDeletionWithResend(
+        userEmail: userEmail,
+        userName: userName,
+      );
+    } catch (e) {
+      print('❌ Error sending account deletion confirmation email: $e');
+      return false;
+    }
+  }
+
+  /// Send account deletion email using Resend
+  static Future<bool> _sendAccountDeletionWithResend({
+    required String userEmail,
+    required String userName,
+  }) async {
+    try {
+      final emailData = {
+        'from': EmailConfig.resendFromEmail,
+        'to': [userEmail],
+        'subject': 'Account Successfully Deleted - ${EmailConfig.appName}',
+        'html': _generateAccountDeletionEmailHTML(
+          userName: userName,
+        ),
+      };
+
+      final response = await http.post(
+        Uri.parse('https://api.resend.com/emails'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ${EmailConfig.resendApiKey}',
+        },
+        body: json.encode(emailData),
+      );
+
+      if (response.statusCode == 200) {
+        print('✅ Account deletion confirmation email sent to $userEmail via Resend');
+        return true;
+      } else {
+        print('❌ Failed to send account deletion email via Resend: ${response.statusCode} - ${response.body}');
+        return false;
+      }
+    } catch (e) {
+      print('❌ Error sending account deletion email with Resend: $e');
+      return false;
+    }
+  }
+
+  /// Generate account deletion email HTML
+  static String _generateAccountDeletionEmailHTML({
+    required String userName,
+  }) {
+    return '''
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Account Deleted - ${EmailConfig.appName}</title>
+        <style>
+            body { 
+                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+                line-height: 1.6; 
+                color: #333; 
+                margin: 0; 
+                padding: 0; 
+                background-color: #f4f4f4;
+            }
+            .container { 
+                max-width: 600px; 
+                margin: 20px auto; 
+                background-color: white; 
+                border-radius: 10px; 
+                overflow: hidden;
+                box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            }
+            .header { 
+                background: linear-gradient(135deg, #6c757d, #495057); 
+                color: white; 
+                padding: 30px 20px; 
+                text-align: center; 
+            }
+            .header h1 { margin: 0; font-size: 28px; }
+            .header h2 { margin: 10px 0 0 0; font-size: 18px; opacity: 0.9; }
+            .content { padding: 30px; }
+            .greeting { font-size: 18px; margin-bottom: 20px; }
+            .info-card { 
+                background-color: #f8f9fa; 
+                border-radius: 8px; 
+                padding: 20px; 
+                margin: 20px 0; 
+                border-left: 4px solid #6c757d;
+            }
+            .message { 
+                background-color: #d1ecf1; 
+                border: 1px solid #bee5eb; 
+                color: #0c5460; 
+                padding: 15px; 
+                border-radius: 5px; 
+                margin: 20px 0;
+            }
+            .footer { 
+                background-color: #f8f9fa; 
+                padding: 20px; 
+                text-align: center; 
+                color: #6c757d; 
+                font-size: 14px; 
+                border-top: 1px solid #e9ecef;
+            }
+            .footer p { margin: 5px 0; }
+            .highlight { color: #6c757d; font-weight: bold; }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="header">
+                <h1>🚗 ${EmailConfig.appName}</h1>
+                <h2>Account Successfully Deleted</h2>
+            </div>
+            <div class="content">
+                <div class="greeting">
+                    Hello <strong>$userName</strong>! 👋
+                </div>
+                
+                <p>We're writing to confirm that your account has been successfully deleted from ${EmailConfig.appName}.</p>
+                
+                <div class="info-card">
+                    <h3>📋 Account Deletion Summary:</h3>
+                    <ul>
+                        <li>✅ Account data has been permanently removed</li>
+                        <li>✅ Personal information has been deleted</li>
+                        <li>✅ Booking history has been cleared</li>
+                        <li>✅ Location history has been removed</li>
+                        <li>✅ All associated data has been purged</li>
+                    </ul>
+                </div>
+                
+                <div class="message">
+                    <strong>📱 Important Information:</strong><br>
+                    • Your account deletion is permanent and cannot be undone<br>
+                    • All your personal data has been removed from our systems<br>
+                    • You can create a new account anytime if you wish to use our services again<br>
+                    • If you have any questions, please contact our support team
+                </div>
+                
+                <p>We're sorry to see you go! If you ever decide to return, we'll be here to welcome you back.</p>
+                
+                <p>Thank you for being a part of the ${EmailConfig.appName} community.</p>
+            </div>
+            <div class="footer">
+                <p><strong>${EmailConfig.companyName}</strong> - Your reliable ride companion</p>
+                <p>© 2024 ${EmailConfig.companyName}. All rights reserved.</p>
+                <p><em>This is an automated message. Please do not reply to this email.</em></p>
+            </div>
+        </div>
+    </body>
+    </html>
+    ''';
+  }
+
+  /// Log account deletion details (fallback when email service is not configured)
+  static void _logAccountDeletionDetails({
+    required String userEmail,
+    required String userName,
+  }) {
+    print('📧 ACCOUNT DELETION CONFIRMATION EMAIL (Fallback Log)');
+    print('==========================================');
+    print('To: $userEmail');
+    print('Name: $userName');
+    print('Status: Account successfully deleted');
+    print('==========================================');
+  }
+
   /// Test email functionality
   static Future<bool> testEmailService() async {
     return await sendBookingConfirmation(

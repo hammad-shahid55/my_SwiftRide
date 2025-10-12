@@ -7,6 +7,7 @@ Swift Ride is a comprehensive cross-platform ride booking and management system,
 - **Supabase Backend** - Authentication, database, storage, and real-time features
 - **Stripe Integration** - Secure payment processing and wallet management
 - **Google Maps Integration** - Route planning, location services, and navigation
+- **Email Notification System** - Automated email notifications via Resend API for booking confirmations, cancellations, and completions
 - **Multi-platform Support** - Android, iOS, Web, and Desktop builds
 
 This guide covers setup, configuration, architecture, and every screen/page in sequence with complete documentation.
@@ -53,6 +54,7 @@ This guide covers setup, configuration, architecture, and every screen/page in s
 - **Stripe Account** (publishable key) - Payment processing
 - **Google Cloud Console** (Maps API key) - Location services
 - **Google Sign-In** (OAuth credentials) - Social authentication
+- **Resend Account** (API key) - Email notification service
 
 ## 2. Quick Start
 
@@ -110,6 +112,7 @@ npm run build
    - Configure Stripe webhook endpoints
    - Set up Google Maps API
    - Configure Google Sign-In OAuth
+   - Set up Resend email service for notifications
 
 4. **Platform Setup**
    - Android: Configure signing keys
@@ -203,7 +206,7 @@ my_SwiftRide/
 │   │   ├── BecomeDriverScreen.dart
 │   │   ├── ContactUsScreen.dart
 │   │   └── ... (7 more screens)
-│   ├── Services/                 # Business logic services (4 files)
+│   ├── Services/                 # Business logic services (5 files)
 │   │   ├── EmailConfig.dart      # Email service configuration
 │   │   ├── SimpleEmailService.dart # Email sending service
 │   │   ├── BookingStatusService.dart # Booking status management
@@ -272,6 +275,7 @@ my_SwiftRide/
 ### Key Directories Explained
 
 - **`lib/Screens/`**: Contains all 22 app screens with complete user flows
+- **`lib/Services/`**: Contains 5 business logic services including email notification system
 - **`lib/Widgets/`**: Contains 16 reusable UI components and widgets
 - **`assets/`**: Static resources including fonts, images, and map styles
 - **`admin_web/`**: Complete React/TypeScript admin dashboard
@@ -287,6 +291,10 @@ my_SwiftRide/
 - **`supabase_flutter: ^2.9.1`** - Supabase client for auth, database, storage
 - **`google_sign_in: ^7.1.0`** - Google OAuth authentication
 - **`flutter_dotenv: ^6.0.0`** - Environment variables management
+
+#### Email Notifications
+- **`http: ^0.13.6`** - HTTP requests for email service integration
+- **Resend API** - Email notification service for booking confirmations, cancellations, and completions
 
 #### Payment Processing
 - **`flutter_stripe: ^11.5.0`** - Stripe payment integration
@@ -337,6 +345,7 @@ my_SwiftRide/
 | **Backend** | supabase_flutter, google_sign_in | Authentication & data |
 | **Payments** | flutter_stripe, http | Payment processing |
 | **Maps** | google_maps_flutter, geolocator, geocoding | Location services |
+| **Email** | http, Resend API | Email notifications |
 | **UI** | animated_text_kit, loading_animation_widget | User interface |
 | **Storage** | shared_preferences, connectivity_plus | Local data & network |
 | **Utils** | intl, timezone, image_picker | Utilities |
@@ -364,6 +373,7 @@ void main() async {
 - Supabase: Auth, database, storage, edge functions (for payments)
 - Stripe: PaymentSheet for wallet top-up
 - Google Maps: Route, distance, and location features
+- Resend: Email notifications for booking confirmations, cancellations, and completions
 
 ## 7.1. Email Notification System
 
@@ -394,6 +404,12 @@ SwiftRide includes a comprehensive email notification system powered by Resend A
 - **Content**: Complaint acknowledgment with tracking ID
 - **Template**: Professional HTML with support information
 - **Includes**: Complaint details, tracking ID, resolution timeline
+
+#### **5. Account Deletion Confirmation Emails**
+- **Trigger**: When user successfully deletes their account
+- **Content**: Account deletion confirmation with data removal summary
+- **Template**: Professional HTML with deletion details
+- **Includes**: Confirmation of data removal, account status, re-registration information
 
 ### 🔧 Email Service Architecture
 
@@ -458,6 +474,14 @@ All emails use professional HTML templates with:
 2. Complaint saved to database
 3. `SimpleEmailService.sendComplaintConfirmation()` called
 4. User receives complaint confirmation email
+
+#### **Account Deletion Flow**
+1. User confirms account deletion via `AccountActionsScreen.dart`
+2. User profile data retrieved before deletion
+3. Account and associated data deleted from database
+4. `SimpleEmailService.sendAccountDeletionConfirmation()` called
+5. User receives account deletion confirmation email
+6. User signed out and redirected to welcome screen
 
 ### 🔧 Configuration
 
@@ -575,6 +599,30 @@ Thank you for reaching out to us. We have received your complaint and our team i
 • Follow-up: We will ensure your issue is completely resolved
 ```
 
+#### **Account Deletion Confirmation**
+```
+Subject: Account Successfully Deleted - SwiftRide
+
+Hello John Doe! 👋
+
+We're writing to confirm that your account has been successfully deleted from SwiftRide.
+
+📋 Account Deletion Summary:
+✅ Account data has been permanently removed
+✅ Personal information has been deleted
+✅ Booking history has been cleared
+✅ Location history has been removed
+✅ All associated data has been purged
+
+📱 Important Information:
+• Your account deletion is permanent and cannot be undone
+• All your personal data has been removed from our systems
+• You can create a new account anytime if you wish to use our services again
+• If you have any questions, please contact our support team
+
+We're sorry to see you go! If you ever decide to return, we'll be here to welcome you back.
+```
+
 ### 🔄 Email Service Status
 
 #### **Configuration Check**
@@ -593,7 +641,7 @@ Service: resend
 // Test all email types
 await SimpleEmailService.testEmailService();
 
-// Test specific email type
+// Test booking confirmation email
 await SimpleEmailService.sendBookingConfirmation(
   userEmail: 'test@example.com',
   userName: 'Test User',
@@ -605,6 +653,12 @@ await SimpleEmailService.sendBookingConfirmation(
   bookingId: 'TEST-${DateTime.now().millisecondsSinceEpoch}',
   fromAddress: 'Karachi Airport Terminal 1',
   toAddress: 'Lahore Railway Station',
+);
+
+// Test account deletion email
+await SimpleEmailService.sendAccountDeletionConfirmation(
+  userEmail: 'test@example.com',
+  userName: 'Test User',
 );
 ```
 
@@ -626,9 +680,10 @@ await SimpleEmailService.sendBookingConfirmation(
 - `profiles`: user info, wallet balance
 - `location_history`: recent locations
 - `trips`: all available trips
-- `bookings`: user bookings
+- `bookings`: user bookings with email notification triggers
 - Edge function: `create-payment-intent` (Stripe)
 - RPC: `increment_wallet` (wallet top-up)
+- Email services: Automated notifications for booking confirmations, cancellations, and completions
 
 ---
 
@@ -653,12 +708,12 @@ await SimpleEmailService.sendBookingConfirmation(
 | `HistoryScreen.dart`            | List of completed rides                                          |
 | `UserProfileScreen.dart`        | View/edit user profile                                           |
 | `SettingsScreen.dart`           | App preferences                                                  |
-| `AccountActionsScreen.dart`     | Profile, password, logout shortcuts                              |
+| `AccountActionsScreen.dart`     | Profile, password, logout shortcuts, account deletion with email notification |
 | `TermsAndConditionsScreen.dart` | Legal info                                                       |
 | `PrivacyPolicyScreen.dart`      | Legal info                                                       |
 | `SetLocationMapScreen.dart`     | Map-based location picker                                        |
 | `BecomeDriverScreen.dart`       | Driver onboarding                                                |
-| `ContactUsScreen.dart`          | Contact/help info with complaint submission and email notifications |
+| `ContactUsScreen.dart`          | Contact/help info with complaint submission and automated email notifications |
 
 ---
 
@@ -1282,7 +1337,7 @@ echo $GOOGLE_MAPS_API_KEY
 
 #### Email Notifications Not Working
 
-**Symptoms**: Users not receiving emails, email service errors
+**Symptoms**: Users not receiving emails, email service errors, booking confirmations not sent
 **Solutions**:
 ```bash
 # Check email configuration
@@ -1300,13 +1355,16 @@ echo $RESEND_FROM_EMAIL
 - Email service not configured in .env
 - Network connectivity to Resend API
 - Email going to spam folder
+- Missing email service initialization
 
 **Debug Steps**:
-1. Check console for email configuration status
-2. Verify .env file has correct Resend API key
-3. Test email service with test function
-4. Check Resend dashboard for delivery logs
-5. Verify sender email domain is verified
+1. Check console for email configuration status on app startup
+2. Verify .env file has correct Resend API key and from email
+3. Test email service with test function in SimpleEmailService
+4. Check Resend dashboard for delivery logs and bounce reports
+5. Verify sender email domain is verified in Resend
+6. Check email templates are properly formatted
+7. Verify booking status service is triggering email notifications
 
 #### Build Failures
 
@@ -1729,6 +1787,7 @@ This comprehensive documentation covers every aspect of the Swift Ride project, 
 - **Comprehensive email notification system** with Resend API
 - **Automated booking workflows** with email confirmations
 - **Professional email templates** with SwiftRide branding
+- **Multi-platform email notifications** for all user actions
 - **Security best practices** and deployment strategies
 
 For any specific implementation details, refer to the corresponding source files in the project structure. This documentation serves as a complete guide for development, deployment, and maintenance of the Swift Ride application.
@@ -1941,14 +2000,15 @@ This section provides detailed information about how each screen functions in th
 - Location permission settings
 
 #### **19. AccountActionsScreen.dart**
-**Purpose**: Account management shortcuts
+**Purpose**: Account management shortcuts with email notifications
 **How it works**:
 - Quick access to profile editing
 - Password change
 - Logout functionality
-- Account deletion
+- Account deletion with automated email confirmation
 - Privacy policy and terms
 - Contact support
+- Sends account deletion confirmation email via Resend API
 
 #### **20. BecomeDriverScreen.dart**
 **Purpose**: Driver onboarding
@@ -1962,16 +2022,16 @@ This section provides detailed information about how each screen functions in th
 - Driver dashboard access
 
 #### **21. ContactUsScreen.dart**
-**Purpose**: Support and contact information with complaint submission
+**Purpose**: Support and contact information with complaint submission and automated email notifications
 **How it works**:
 - Contact information display
 - Email and phone number links
-- Complaint submission form with email notifications
+- Complaint submission form with automated email notifications via Resend API
 - Support ticket creation with tracking ID
 - FAQ section
 - Social media links
 - Office address and hours
-- Automatic email confirmation for complaints
+- Automatic email confirmation for complaints using professional HTML templates
 
 #### **22. PrivacyPolicyScreen.dart & TermsAndConditionsScreen.dart**
 **Purpose**: Legal information display

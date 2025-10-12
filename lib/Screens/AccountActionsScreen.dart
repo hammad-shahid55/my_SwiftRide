@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:swift_ride/Screens/WelcomeScreen.dart';
 import 'package:swift_ride/Widgets/theme.dart';
+import 'package:swift_ride/Services/SimpleEmailService.dart';
 
 class AccountActionsScreen extends StatelessWidget {
   const AccountActionsScreen({super.key});
@@ -88,6 +89,16 @@ class AccountActionsScreen extends StatelessWidget {
     if (confirm != true) return;
 
     try {
+      // Get user profile data before deletion for email notification
+      final profileResponse = await supabase
+          .from('profiles')
+          .select('name, email')
+          .eq('id', user.id)
+          .single();
+      
+      final userName = profileResponse['name'] ?? 'User';
+      final userEmail = profileResponse['email'] ?? user.email ?? '';
+
       await supabase.from('location_history').delete().eq('user_id', user.id);
 
       final response = await supabase.functions.invoke(
@@ -97,6 +108,14 @@ class AccountActionsScreen extends StatelessWidget {
 
       if (response.status != 200) {
         throw Exception("Failed to delete account: ${response.data}");
+      }
+
+      // Send account deletion confirmation email
+      if (userEmail.isNotEmpty) {
+        await SimpleEmailService.sendAccountDeletionConfirmation(
+          userEmail: userEmail,
+          userName: userName,
+        );
       }
 
       await supabase.auth.signOut();
