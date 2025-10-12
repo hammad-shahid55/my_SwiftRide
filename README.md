@@ -69,8 +69,7 @@ cd my_SwiftRide
 flutter pub get
 
 # Create environment file
-cp .env.example .env
-# Edit .env with your API keys (see Environment Variables section)
+# Create .env file manually with your API keys (see Environment Variables section)
 
 # Run the app
 flutter run
@@ -86,8 +85,7 @@ cd admin_web
 npm install
 
 # Create environment file
-cp .env.example .env
-# Edit .env with your Supabase credentials
+# Create .env file manually with your Supabase credentials
 
 # Start development server
 npm run dev
@@ -209,6 +207,7 @@ my_SwiftRide/
 │   ├── Services/                 # Business logic services (5 files)
 │   │   ├── EmailConfig.dart      # Email service configuration
 │   │   ├── SimpleEmailService.dart # Email sending service
+│   │   ├── EmailTestService.dart # Email configuration testing
 │   │   ├── BookingStatusService.dart # Booking status management
 │   │   └── AutoCompletionService.dart # Auto-completion logic
 │   └── Widgets/                  # Reusable UI components (16 files)
@@ -359,9 +358,26 @@ my_SwiftRide/
 ```dart
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await dotenv.load(fileName: '.env');
-  await Supabase.initialize(url: ..., anonKey: ...);
-  Stripe.publishableKey = ...;
+  try {
+    await dotenv.load(fileName: '.env');
+  } catch (_) {
+    print('⚠️ .env file not found, using default values');
+  }
+
+  final envSupabaseUrl = dotenv.env['SUPABASE_URL'] ?? supabaseUrl;
+  final envSupabaseKey = dotenv.env['SUPABASE_ANON_KEY'] ?? supabaseKey;
+  final stripeKey = dotenv.env['STRIPE_PUBLISHABLE_KEY'] ?? '';
+  if (stripeKey.isNotEmpty) {
+    Stripe.publishableKey = stripeKey;
+  }
+  await Supabase.initialize(url: envSupabaseUrl, anonKey: envSupabaseKey);
+
+  // Check email configuration status (optional - for debugging)
+  EmailTestService.printConfigurationStatus();
+
+  // Check for rides that need auto-completion (run in background)
+  AutoCompletionService.checkAndAutoCompleteRides();
+
   runApp(MainApp());
 }
 ```
@@ -424,6 +440,12 @@ SwiftRide includes a comprehensive email notification system powered by Resend A
 - HTML template generation
 - Resend API integration
 - Error handling and fallback logging
+
+#### **EmailTestService.dart**
+- Email configuration testing
+- Test email sending functionality
+- Configuration status checking
+- Debug and troubleshooting support
 
 #### **BookingStatusService.dart**
 - Booking status management
@@ -761,9 +783,9 @@ await SimpleEmailService.sendAccountDeletionConfirmation(
 
 #### Build Configuration (`android/app/build.gradle.kts`)
 - **Application ID**: `com.example.swift_ride`
-- **Target SDK**: 35 (Android 15)
+- **Target SDK**: 36 (Android 15)
 - **Min SDK**: Flutter default
-- **Compile SDK**: 35
+- **Compile SDK**: 36
 - **Java Version**: 11
 
 #### Required Permissions
@@ -2158,6 +2180,8 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 import 'package:swift_ride/Screens/SplashScreen.dart';
+import 'package:swift_ride/Services/EmailTestService.dart';
+import 'package:swift_ride/Services/AutoCompletionService.dart';
 
 const supabaseUrl = String.fromEnvironment('SUPABASE_URL');
 const supabaseKey = String.fromEnvironment('SUPABASE_ANON_KEY');
@@ -2166,7 +2190,9 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   try {
     await dotenv.load(fileName: '.env');
-  } catch (_) {}
+  } catch (_) {
+    print('⚠️ .env file not found, using default values');
+  }
 
   final envSupabaseUrl = dotenv.env['SUPABASE_URL'] ?? supabaseUrl;
   final envSupabaseKey = dotenv.env['SUPABASE_ANON_KEY'] ?? supabaseKey;
@@ -2175,6 +2201,12 @@ void main() async {
     Stripe.publishableKey = stripeKey;
   }
   await Supabase.initialize(url: envSupabaseUrl, anonKey: envSupabaseKey);
+
+  // Check email configuration status (optional - for debugging)
+  EmailTestService.printConfigurationStatus();
+
+  // Check for rides that need auto-completion (run in background)
+  AutoCompletionService.checkAndAutoCompleteRides();
 
   runApp(MainApp());
 }
@@ -2466,7 +2498,7 @@ create index if not exists trips_route_time_idx on public.trips(from_city, to_ci
 
 ## Admin Web (overview)
 
-Note: The `admin_web` folder is currently removed. This section documents the intended Admin Web app so you can recreate it quickly and connect to the same Supabase backend as the Flutter app.
+The `admin_web` folder contains a complete React/TypeScript admin dashboard that connects to the same Supabase backend as the Flutter app.
 
 ### Stack
 
