@@ -35,7 +35,7 @@ This guide covers setup, configuration, architecture, and every screen/page in s
 
 ---
 
-## 1. Prerequisites
+## 1. Prerequisites 
 
 ### Development Environment
 - **Flutter SDK** (3.7+) with Dart SDK (bundled)
