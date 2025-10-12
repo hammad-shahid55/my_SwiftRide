@@ -5,6 +5,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 import 'package:swift_ride/Screens/SplashScreen.dart';
 import 'package:swift_ride/Services/EmailTestService.dart';
+import 'package:swift_ride/Services/AutoCompletionService.dart';
 
 const supabaseUrl = String.fromEnvironment('SUPABASE_URL');
 const supabaseKey = String.fromEnvironment('SUPABASE_ANON_KEY');
@@ -25,6 +26,9 @@ void main() async {
 
   // Check email configuration status (optional - for debugging)
   EmailTestService.printConfigurationStatus();
+
+  // Check for rides that need auto-completion (run in background)
+  AutoCompletionService.checkAndAutoCompleteRides();
 
   runApp(MainApp());
 }

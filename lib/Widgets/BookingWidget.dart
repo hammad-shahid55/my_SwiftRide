@@ -140,6 +140,8 @@ class _BookingWidgetState extends State<BookingWidget> {
               totalPrice: totalPrice,
               rideTime: widget.trip['depart_time'] ?? DateTime.now().toIso8601String(),
               bookingId: bookingId,
+              fromAddress: widget.trip['from'] as String?,
+              toAddress: widget.trip['to'] as String?,
             );
 
             if (emailSent) {

@@ -5,6 +5,7 @@ import 'package:swift_ride/Screens/LocationSelectionScreen.dart';
 import 'package:swift_ride/Screens/SignInScreen.dart';
 import 'package:swift_ride/Widgets/app_drawer.dart';
 import 'package:swift_ride/Widgets/theme.dart';
+import 'package:swift_ride/Services/AutoCompletionService.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -31,6 +32,20 @@ class _HomeScreenState extends State<HomeScreen> {
     fetchUserName();
     fetchRecentLocations();
     fetchCompletedRides();
+    _checkAutoCompletion();
+  }
+
+  /// Check for rides that should be auto-completed
+  Future<void> _checkAutoCompletion() async {
+    try {
+      final user = supabase.auth.currentUser;
+      if (user == null) return;
+
+      // Check user's rides for auto-completion
+      await AutoCompletionService.checkUserRidesForCompletion(user.id);
+    } catch (e) {
+      print('Error checking auto-completion: $e');
+    }
   }
 
   Future<void> fetchUserName() async {
