@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:swift_ride/Widgets/theme.dart';
+import 'package:swift_ride/Services/BookingStatusService.dart';
+import 'package:swift_ride/Services/AutoCompletionService.dart';
 
 class HistoryScreen extends StatefulWidget {
   const HistoryScreen({super.key});
@@ -25,6 +27,20 @@ class _HistoryScreenState extends State<HistoryScreen>
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
     fetchBookings();
+    _checkAutoCompletion();
+  }
+
+  /// Check for rides that should be auto-completed
+  Future<void> _checkAutoCompletion() async {
+    try {
+      final user = supabase.auth.currentUser;
+      if (user == null) return;
+
+      // Check user's rides for auto-completion
+      await AutoCompletionService.checkUserRidesForCompletion(user.id);
+    } catch (e) {
+      print('Error checking auto-completion: $e');
+    }
   }
 
   Future<void> fetchBookings() async {
@@ -230,27 +246,63 @@ class _HistoryScreenState extends State<HistoryScreen>
       final dynamic bookingId = booking['id'];
       if (bookingId == null) return;
 
-      await supabase.from('bookings').update({'status': 'cancelled'}).eq('id', bookingId);
+      // Show loading
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
 
-      if (tripId != null && seats > 0) {
-        final trip = await supabase.from('trips').select('total_seats').eq('id', tripId).single();
-        final int currentSeats = (trip['total_seats'] as int?) ?? 0;
-        await supabase
-            .from('trips')
-            .update({'total_seats': currentSeats + seats})
-            .eq('id', tripId);
+      // Use BookingStatusService to cancel and send email
+      final success = await BookingStatusService.cancelBooking(
+        bookingId: bookingId.toString(),
+        reason: 'Cancelled by user',
+      );
+
+      // Update seats in trip if cancellation was successful
+      if (success && tripId != null && seats > 0) {
+        try {
+          final trip = await supabase.from('trips').select('total_seats').eq('id', tripId).single();
+          final int currentSeats = (trip['total_seats'] as int?) ?? 0;
+          await supabase
+              .from('trips')
+              .update({'total_seats': currentSeats + seats})
+              .eq('id', tripId);
+        } catch (e) {
+          print('Error updating trip seats: $e');
+        }
       }
+
+      Navigator.pop(context); // Close loading dialog
 
       await fetchBookings();
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Booking cancelled.')),
-        );
+        if (success) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Booking cancelled and email sent!'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Booking cancelled but email failed.'),
+              backgroundColor: Colors.orange,
+            ),
+          );
+        }
       }
     } catch (e) {
+      Navigator.pop(context); // Close loading dialog if open
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Cancellation failed: $e')),
+          SnackBar(
+            content: Text('Cancellation failed: $e'),
+            backgroundColor: Colors.red,
+          ),
         );
       }
     }
