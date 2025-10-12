@@ -40,78 +40,18 @@ class SimpleEmailService {
     }
 
     try {
-      switch (EmailConfig.emailService) {
-        case 'resend':
-          return await _sendWithResend(
-            userEmail: userEmail,
-            userName: userName,
-            fromCity: fromCity,
-            toCity: toCity,
-            seats: seats,
-            totalPrice: totalPrice,
-            rideTime: rideTime,
-            bookingId: bookingId,
-            fromAddress: fromAddress,
-            toAddress: toAddress,
-          );
-        case 'sendgrid':
-          return await _sendWithSendGrid(
-            userEmail: userEmail,
-            userName: userName,
-            fromCity: fromCity,
-            toCity: toCity,
-            seats: seats,
-            totalPrice: totalPrice,
-            rideTime: rideTime,
-            bookingId: bookingId,
-          );
-        case 'mailgun':
-          return await _sendWithMailgun(
-            userEmail: userEmail,
-            userName: userName,
-            fromCity: fromCity,
-            toCity: toCity,
-            seats: seats,
-            totalPrice: totalPrice,
-            rideTime: rideTime,
-            bookingId: bookingId,
-          );
-        case 'emailjs':
-          return await _sendWithEmailJS(
-            userEmail: userEmail,
-            userName: userName,
-            fromCity: fromCity,
-            toCity: toCity,
-            seats: seats,
-            totalPrice: totalPrice,
-            rideTime: rideTime,
-            bookingId: bookingId,
-          );
-        case 'webhook':
-          return await _sendWithWebhook(
-            userEmail: userEmail,
-            userName: userName,
-            fromCity: fromCity,
-            toCity: toCity,
-            seats: seats,
-            totalPrice: totalPrice,
-            rideTime: rideTime,
-            bookingId: bookingId,
-          );
-        default:
-          print('❌ Unknown email service: ${EmailConfig.emailService}');
-          _logBookingDetails(
-            userEmail: userEmail,
-            userName: userName,
-            fromCity: fromCity,
-            toCity: toCity,
-            seats: seats,
-            totalPrice: totalPrice,
-            rideTime: rideTime,
-            bookingId: bookingId,
-          );
-          return false;
-      }
+      return await _sendWithResend(
+        userEmail: userEmail,
+        userName: userName,
+        fromCity: fromCity,
+        toCity: toCity,
+        seats: seats,
+        totalPrice: totalPrice,
+        rideTime: rideTime,
+        bookingId: bookingId,
+        fromAddress: fromAddress,
+        toAddress: toAddress,
+      );
     } catch (e) {
       print('❌ Error in SimpleEmailService: $e');
       // Fallback: Just log the booking details
@@ -182,209 +122,6 @@ class SimpleEmailService {
     }
   }
 
-  /// Send email using SendGrid API
-  static Future<bool> _sendWithSendGrid({
-    required String userEmail,
-    required String userName,
-    required String fromCity,
-    required String toCity,
-    required int seats,
-    required int totalPrice,
-    required String rideTime,
-    required String bookingId,
-  }) async {
-    try {
-      final emailData = {
-        'personalizations': [
-          {
-            'to': [{'email': userEmail}],
-            'subject': 'Booking Confirmation - ${EmailConfig.appName}',
-          }
-        ],
-        'from': {'email': EmailConfig.sendgridFromEmail},
-        'content': [
-          {
-            'type': 'text/html',
-            'value': _generateEmailHTML(
-              userName: userName,
-              fromCity: fromCity,
-              toCity: toCity,
-              seats: seats,
-              totalPrice: totalPrice,
-              rideTime: rideTime,
-              bookingId: bookingId,
-            ),
-          }
-        ],
-      };
-
-      final response = await http.post(
-        Uri.parse('https://api.sendgrid.com/v3/mail/send'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer ${EmailConfig.sendgridApiKey}',
-        },
-        body: json.encode(emailData),
-      );
-
-      if (response.statusCode == 202) {
-        print('✅ Booking confirmation email sent to $userEmail via SendGrid');
-        return true;
-      } else {
-        print('❌ Failed to send email via SendGrid: ${response.statusCode} - ${response.body}');
-        return false;
-      }
-    } catch (e) {
-      print('❌ Error sending email with SendGrid: $e');
-      return false;
-    }
-  }
-
-  /// Send email using Mailgun API
-  static Future<bool> _sendWithMailgun({
-    required String userEmail,
-    required String userName,
-    required String fromCity,
-    required String toCity,
-    required int seats,
-    required int totalPrice,
-    required String rideTime,
-    required String bookingId,
-  }) async {
-    try {
-      final emailData = {
-        'from': EmailConfig.mailgunFromEmail,
-        'to': userEmail,
-        'subject': 'Booking Confirmation - ${EmailConfig.appName}',
-        'html': _generateEmailHTML(
-          userName: userName,
-          fromCity: fromCity,
-          toCity: toCity,
-          seats: seats,
-          totalPrice: totalPrice,
-          rideTime: rideTime,
-          bookingId: bookingId,
-        ),
-      };
-
-      final response = await http.post(
-        Uri.parse('https://api.mailgun.net/v3/${EmailConfig.mailgunDomain}/messages'),
-        headers: {
-          'Authorization': 'Basic ${base64Encode(utf8.encode('api:${EmailConfig.mailgunApiKey}'))}',
-        },
-        body: emailData,
-      );
-
-      if (response.statusCode == 200) {
-        print('✅ Booking confirmation email sent to $userEmail via Mailgun');
-        return true;
-      } else {
-        print('❌ Failed to send email via Mailgun: ${response.statusCode} - ${response.body}');
-        return false;
-      }
-    } catch (e) {
-      print('❌ Error sending email with Mailgun: $e');
-      return false;
-    }
-  }
-
-  /// Send email using EmailJS
-  static Future<bool> _sendWithEmailJS({
-    required String userEmail,
-    required String userName,
-    required String fromCity,
-    required String toCity,
-    required int seats,
-    required int totalPrice,
-    required String rideTime,
-    required String bookingId,
-  }) async {
-    try {
-      final emailData = {
-        'service_id': EmailConfig.emailJsServiceId,
-        'template_id': EmailConfig.emailJsTemplateId,
-        'user_id': EmailConfig.emailJsUserId,
-        'template_params': {
-          'to_email': userEmail,
-          'user_name': userName,
-          'from_city': fromCity,
-          'to_city': toCity,
-          'seats': seats.toString(),
-          'total_price': totalPrice.toString(),
-          'ride_time': _formatRideTime(rideTime),
-          'booking_id': bookingId,
-          'booking_date': DateTime.now().toIso8601String().split('T')[0],
-        }
-      };
-
-      final response = await http.post(
-        Uri.parse('https://api.emailjs.com/api/v1.0/email/send'),
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: json.encode(emailData),
-      );
-
-      if (response.statusCode == 200) {
-        print('✅ Booking confirmation email sent to $userEmail via EmailJS');
-        return true;
-      } else {
-        print('❌ Failed to send email via EmailJS: ${response.statusCode} - ${response.body}');
-        return false;
-      }
-    } catch (e) {
-      print('❌ Error sending email with EmailJS: $e');
-      return false;
-    }
-  }
-
-  /// Send email using webhook
-  static Future<bool> _sendWithWebhook({
-    required String userEmail,
-    required String userName,
-    required String fromCity,
-    required String toCity,
-    required int seats,
-    required int totalPrice,
-    required String rideTime,
-    required String bookingId,
-  }) async {
-    try {
-      final bookingData = {
-        'type': 'booking_confirmation',
-        'user_email': userEmail,
-        'user_name': userName,
-        'booking_details': {
-          'booking_id': bookingId,
-          'from_city': fromCity,
-          'to_city': toCity,
-          'seats': seats,
-          'total_price': totalPrice,
-          'ride_time': rideTime,
-          'booking_date': DateTime.now().toIso8601String(),
-        }
-      };
-
-      final response = await http.post(
-        Uri.parse(EmailConfig.webhookUrl),
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: json.encode(bookingData),
-      );
-
-      if (response.statusCode == 200) {
-        print('✅ Booking confirmation webhook sent successfully');
-        return true;
-      } else {
-        print('❌ Failed to send webhook: ${response.statusCode} - ${response.body}');
-        return false;
-      }
-    } catch (e) {
-      print('❌ Error sending webhook: $e');
-      return false;
-    }
-  }
 
   /// Generate HTML email content
   static String _generateEmailHTML({
@@ -1127,25 +864,19 @@ class SimpleEmailService {
     }
 
     try {
-      switch (EmailConfig.emailService) {
-        case 'resend':
-          return await _sendCancellationWithResend(
-            userEmail: userEmail,
-            userName: userName,
-            fromCity: fromCity,
-            toCity: toCity,
-            seats: seats,
-            totalPrice: totalPrice,
-            rideTime: rideTime,
-            bookingId: bookingId,
-            fromAddress: fromAddress,
-            toAddress: toAddress,
-            cancellationReason: cancellationReason,
-          );
-        default:
-          print('❌ Cancellation email not implemented for ${EmailConfig.emailService}');
-          return false;
-      }
+      return await _sendCancellationWithResend(
+        userEmail: userEmail,
+        userName: userName,
+        fromCity: fromCity,
+        toCity: toCity,
+        seats: seats,
+        totalPrice: totalPrice,
+        rideTime: rideTime,
+        bookingId: bookingId,
+        fromAddress: fromAddress,
+        toAddress: toAddress,
+        cancellationReason: cancellationReason,
+      );
     } catch (e) {
       print('❌ Error sending cancellation email: $e');
       return false;
@@ -1184,24 +915,18 @@ class SimpleEmailService {
     }
 
     try {
-      switch (EmailConfig.emailService) {
-        case 'resend':
-          return await _sendCompletionWithResend(
-            userEmail: userEmail,
-            userName: userName,
-            fromCity: fromCity,
-            toCity: toCity,
-            seats: seats,
-            totalPrice: totalPrice,
-            rideTime: rideTime,
-            bookingId: bookingId,
-            fromAddress: fromAddress,
-            toAddress: toAddress,
-          );
-        default:
-          print('❌ Completion email not implemented for ${EmailConfig.emailService}');
-          return false;
-      }
+      return await _sendCompletionWithResend(
+        userEmail: userEmail,
+        userName: userName,
+        fromCity: fromCity,
+        toCity: toCity,
+        seats: seats,
+        totalPrice: totalPrice,
+        rideTime: rideTime,
+        bookingId: bookingId,
+        fromAddress: fromAddress,
+        toAddress: toAddress,
+      );
     } catch (e) {
       print('❌ Error sending completion email: $e');
       return false;

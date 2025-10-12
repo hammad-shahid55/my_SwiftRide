@@ -14,7 +14,9 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   try {
     await dotenv.load(fileName: '.env');
-  } catch (_) {}
+  } catch (_) {
+    print('⚠️ .env file not found, using default values');
+  }
 
   final envSupabaseUrl = dotenv.env['SUPABASE_URL'] ?? supabaseUrl;
   final envSupabaseKey = dotenv.env['SUPABASE_ANON_KEY'] ?? supabaseKey;
