@@ -4,6 +4,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 import 'package:swift_ride/Screens/SplashScreen.dart';
+import 'package:swift_ride/Services/EmailTestService.dart';
 
 const supabaseUrl = String.fromEnvironment('SUPABASE_URL');
 const supabaseKey = String.fromEnvironment('SUPABASE_ANON_KEY');
@@ -21,6 +22,9 @@ void main() async {
     Stripe.publishableKey = stripeKey;
   }
   await Supabase.initialize(url: envSupabaseUrl, anonKey: envSupabaseKey);
+
+  // Check email configuration status (optional - for debugging)
+  EmailTestService.printConfigurationStatus();
 
   runApp(MainApp());
 }

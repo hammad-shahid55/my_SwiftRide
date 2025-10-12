@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:swift_ride/Screens/HomeScreen.dart';
+import 'package:swift_ride/Services/SimpleEmailService.dart';
 import 'package:intl/intl.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'package:timezone/data/latest_all.dart' as tzdata;
@@ -78,7 +79,7 @@ class _BookingWidgetState extends State<BookingWidget> {
         if (user == null) throw "User not logged in";
 
         // Save booking
-        await supabase.from('bookings').insert({
+        final bookingResponse = await supabase.from('bookings').insert({
           'user_id': user.id,
           'trip_id': widget.trip['id'],
           'from_city': fromCity,
@@ -88,7 +89,13 @@ class _BookingWidgetState extends State<BookingWidget> {
           'status': 'booked',
           // Save ride_time at booking time using the trip's scheduled depart_time
           'ride_time': widget.trip['depart_time'],
-        });
+        }).select();
+
+        // Get the booking ID from the response
+        String bookingId = 'BOOK-${DateTime.now().millisecondsSinceEpoch}';
+        if (bookingResponse.isNotEmpty) {
+          bookingId = bookingResponse.first['id']?.toString() ?? bookingId;
+        }
 
         // Update seats in trips table
         final int currentSeats =
@@ -102,11 +109,58 @@ class _BookingWidgetState extends State<BookingWidget> {
             .update({'total_seats': newSeats})
             .eq('id', widget.trip['id']);
 
+        // Get user profile for email notification
+        String userName = 'User';
+        try {
+          final profileResponse = await supabase
+              .from('profiles')
+              .select('name')
+              .eq('id', user.id)
+              .maybeSingle();
+          
+          if (profileResponse != null && profileResponse['name'] != null) {
+            userName = profileResponse['name'];
+          } else {
+            userName = user.email?.split('@').first ?? 'User';
+          }
+        } catch (e) {
+          print('Error fetching user profile: $e');
+          userName = user.email?.split('@').first ?? 'User';
+        }
+
+        // Send email notification
+        if (user.email != null && user.email!.isNotEmpty) {
+          try {
+            final emailSent = await SimpleEmailService.sendBookingConfirmation(
+              userEmail: user.email!,
+              userName: userName,
+              fromCity: fromCity,
+              toCity: toCity,
+              seats: bookedSeats,
+              totalPrice: totalPrice,
+              rideTime: widget.trip['depart_time'] ?? DateTime.now().toIso8601String(),
+              bookingId: bookingId,
+            );
+
+            if (emailSent) {
+              print('✅ Email notification sent successfully');
+            } else {
+              print('⚠️ Email notification failed, but booking was successful');
+            }
+          } catch (e) {
+            print('❌ Error sending email notification: $e');
+            // Don't fail the booking if email fails
+          }
+        }
+
         widget.onBookingCompleted();
 
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(const SnackBar(content: Text("Booking Successful!")));
+        ).showSnackBar(const SnackBar(
+          content: Text("Booking Successful! Check your email for confirmation."),
+          backgroundColor: Colors.green,
+        ));
 
         if (mounted) {
           Navigator.pushAndRemoveUntil(
@@ -118,7 +172,10 @@ class _BookingWidgetState extends State<BookingWidget> {
       } catch (e) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text("Booking Failed: $e")));
+        ).showSnackBar(SnackBar(
+          content: Text("Booking Failed: $e"),
+          backgroundColor: Colors.red,
+        ));
       }
     }
   }
