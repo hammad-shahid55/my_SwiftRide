@@ -23,6 +23,8 @@ export const DriverDetail: React.FC = () => {
   const [driver, setDriver] = React.useState<Driver | null>(null);
   const [trips, setTrips] = React.useState<Trip[]>([]);
   const [bookings, setBookings] = React.useState<Booking[]>([]);
+  const [overallRating, setOverallRating] = React.useState<number | null>(null);
+  const [totalRatings, setTotalRatings] = React.useState<number>(0);
   const [loading, setLoading] = React.useState(true);
 
   React.useEffect(() => {
@@ -48,6 +50,30 @@ export const DriverDetail: React.FC = () => {
           .in("trip_id", tripIds)
           .order("created_at", { ascending: false });
       }
+      
+      // Fetch overall rating
+      try {
+        const { data: ratingsData } = await supabase
+          .from("ratings")
+          .select("rating")
+          .eq("driver_id", id);
+        
+        if (ratingsData && ratingsData.length > 0) {
+          const total = ratingsData.length;
+          const sum = ratingsData.reduce((acc, r) => acc + (r.rating || 0), 0);
+          const avg = sum / total;
+          setOverallRating(Math.round(avg * 10) / 10);
+          setTotalRatings(total);
+        } else {
+          setOverallRating(null);
+          setTotalRatings(0);
+        }
+      } catch (error) {
+        console.error("Error fetching rating:", error);
+        setOverallRating(null);
+        setTotalRatings(0);
+      }
+      
       setDriver((d.data as Driver) || null);
       setTrips((t.data as Trip[]) || []);
       setBookings((b.data as Booking[]) || []);
@@ -71,8 +97,24 @@ export const DriverDetail: React.FC = () => {
     <div style={{ display: "grid", gap: 16 }}>
       <div
         className="card"
-        style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}
+        style={{ display: "grid", gridTemplateColumns: "auto 1fr 1fr", gap: 16 }}
       >
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", paddingRight: 16, borderRight: "1px solid rgba(255,255,255,0.1)" }}>
+          {overallRating !== null ? (
+            <>
+              <div style={{ fontSize: 32, fontWeight: 700, color: "#fbbf24", lineHeight: 1 }}>
+                ⭐ {overallRating.toFixed(1)}
+              </div>
+              <div style={{ fontSize: 12, color: "#9ca3af", marginTop: 4 }}>
+                {totalRatings} {totalRatings === 1 ? "rating" : "ratings"}
+              </div>
+            </>
+          ) : (
+            <div style={{ fontSize: 14, color: "#9ca3af" }}>
+              No ratings
+            </div>
+          )}
+        </div>
         <div>
           <div className="stat-title">Driver</div>
           <div style={{ fontSize: 20, fontWeight: 700 }}>

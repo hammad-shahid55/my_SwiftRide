@@ -2,7 +2,7 @@ import React from "react";
 import { Link } from "react-router-dom";
 import { supabase, supabaseConfigured } from "../lib/supabaseClient";
 
-type Driver = { id: string; full_name?: string; phone?: string };
+type Driver = { id: string; full_name?: string; phone?: string; overallRating?: number; totalRatings?: number };
 
 export const Drivers: React.FC = () => {
   const [drivers, setDrivers] = React.useState<Driver[]>([]);
@@ -12,7 +12,36 @@ export const Drivers: React.FC = () => {
     if (!supabaseConfigured) return;
     setLoading(true);
     const { data } = await supabase.from("drivers").select("*");
-    setDrivers((data as Driver[]) || []);
+    const driversList = (data as Driver[]) || [];
+    
+    // Fetch overall ratings for each driver
+    const driversWithRatings = await Promise.all(
+      driversList.map(async (driver) => {
+        try {
+          const { data: ratingsData } = await supabase
+            .from("ratings")
+            .select("rating")
+            .eq("driver_id", driver.id);
+          
+          if (ratingsData && ratingsData.length > 0) {
+            const totalRatings = ratingsData.length;
+            const sum = ratingsData.reduce((acc, r) => acc + (r.rating || 0), 0);
+            const overallRating = sum / totalRatings;
+            return {
+              ...driver,
+              overallRating: Math.round(overallRating * 10) / 10, // Round to 1 decimal
+              totalRatings,
+            };
+          }
+          return { ...driver, overallRating: undefined, totalRatings: 0 };
+        } catch (error) {
+          console.error(`Error fetching rating for driver ${driver.id}:`, error);
+          return { ...driver, overallRating: undefined, totalRatings: 0 };
+        }
+      })
+    );
+    
+    setDrivers(driversWithRatings);
     setLoading(false);
   };
 
@@ -28,6 +57,7 @@ export const Drivers: React.FC = () => {
       <table className="styled">
         <thead>
           <tr>
+            <Th>Rating</Th>
             <Th>ID</Th>
             <Th>Name</Th>
             <Th>Phone</Th>
@@ -36,6 +66,20 @@ export const Drivers: React.FC = () => {
         <tbody>
           {drivers.map((d) => (
             <tr key={d.id}>
+              <Td>
+                {d.overallRating !== undefined ? (
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <span style={{ fontSize: 18, fontWeight: 600, color: "#fbbf24" }}>
+                      ⭐ {d.overallRating.toFixed(1)}
+                    </span>
+                    <span style={{ fontSize: 12, color: "#9ca3af" }}>
+                      ({d.totalRatings || 0})
+                    </span>
+                  </div>
+                ) : (
+                  <span style={{ color: "#9ca3af" }}>No ratings</span>
+                )}
+              </Td>
               <Td style={{ fontFamily: "monospace" }}>{d.id}</Td>
               <Td>
                 <Link to={`/drivers/${d.id}`} style={{ color: "#93c5fd" }}>

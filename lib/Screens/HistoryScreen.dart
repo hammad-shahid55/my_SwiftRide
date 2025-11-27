@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:swift_ride/Widgets/theme.dart';
+import 'package:swift_ride/Widgets/StarRating.dart';
 import 'package:swift_ride/Services/BookingStatusService.dart';
 import 'package:swift_ride/Services/AutoCompletionService.dart';
 
@@ -19,6 +20,8 @@ class _HistoryScreenState extends State<HistoryScreen>
   List<Map<String, dynamic>> completed = [];
   List<Map<String, dynamic>> cancelled = [];
   Map<dynamic, Map<String, dynamic>> tripIdToTrip = {};
+  Map<dynamic, int> bookingIdToRating = {}; // Store ratings for bookings
+  Map<dynamic, dynamic> bookingIdToDriverId = {}; // Store driver_id for bookings
   bool isLoading = true;
   late TabController _tabController;
 
@@ -55,7 +58,7 @@ class _HistoryScreenState extends State<HistoryScreen>
 
     final allBookings = List<Map<String, dynamic>>.from(response);
 
-    // Fetch related trips to show full addresses
+    // Fetch related trips to show full addresses and driver_id
     final tripIds = allBookings
         .map((b) => b['trip_id'])
         .where((id) => id != null)
@@ -65,11 +68,45 @@ class _HistoryScreenState extends State<HistoryScreen>
     if (tripIds.isNotEmpty) {
       final trips = await supabase
           .from('trips')
-          .select('id, from, to, total_seats')
+          .select('id, from, to, total_seats, driver_id')
           .filter('id', 'in', '(${tripIds.join(',')})');
       for (final t in (trips as List)) {
         final m = t as Map<String, dynamic>;
         tripsMap[m['id']] = m;
+      }
+    }
+
+    // Fetch existing ratings for completed bookings
+    final completedBookingIds = allBookings
+        .where((b) {
+          final String status = (b['status'] as String?) ?? 'booked';
+          final dynamic rt = b['ride_time'];
+          DateTime? rideTime;
+          if (rt is String && rt.isNotEmpty) {
+            try {
+              rideTime = DateTime.parse(rt);
+            } catch (_) {}
+          }
+          final now = DateTime.now();
+          return status == 'completed' || (rideTime != null && rideTime.isBefore(now));
+        })
+        .map((b) => b['id'])
+        .where((id) => id != null)
+        .toList();
+    
+    Map<dynamic, int> ratingsMap = {};
+    if (completedBookingIds.isNotEmpty) {
+      try {
+        final ratings = await supabase
+            .from('ratings')
+            .select('booking_id, rating')
+            .inFilter('booking_id', completedBookingIds);
+        for (final r in (ratings as List)) {
+          final m = r as Map<String, dynamic>;
+          ratingsMap[m['booking_id']] = (m['rating'] as int?) ?? 0;
+        }
+      } catch (e) {
+        print('Error fetching ratings: $e');
       }
     }
 
@@ -95,7 +132,11 @@ class _HistoryScreenState extends State<HistoryScreen>
         enriched['from_address'] = trip['from'];
         enriched['to_address'] = trip['to'];
         enriched['trip_total_seats'] = trip['total_seats'];
+        enriched['driver_id'] = trip['driver_id'];
       }
+      
+      // Add rating if exists
+      enriched['rating'] = ratingsMap[enriched['id']] ?? 0;
 
       if (status == 'cancelled') {
         cancelledLocal.add(enriched);
@@ -110,11 +151,21 @@ class _HistoryScreenState extends State<HistoryScreen>
       }
     }
 
+    // Build rating and driver maps
+    Map<dynamic, int> ratingMap = {};
+    Map<dynamic, dynamic> driverMap = {};
+    for (final b in completedLocal) {
+      ratingMap[b['id']] = (b['rating'] as int?) ?? 0;
+      driverMap[b['id']] = b['driver_id'];
+    }
+
     setState(() {
       upcoming = upcomingLocal;
       completed = completedLocal;
       cancelled = cancelledLocal;
       tripIdToTrip = tripsMap;
+      bookingIdToRating = ratingMap;
+      bookingIdToDriverId = driverMap;
       isLoading = false;
     });
   }
@@ -193,6 +244,29 @@ class _HistoryScreenState extends State<HistoryScreen>
               Text("Ride Time: $rideDisplay")
             else if (createdDisplay != null)
               Text("Booked At: $createdDisplay"),
+            // Show rating section for completed rides
+            if (displayedStatus == 'completed') ...[
+              const SizedBox(height: 8),
+              const Divider(),
+              const SizedBox(height: 4),
+              Row(
+                children: [
+                  const Text(
+                    "Rate your ride: ",
+                    style: TextStyle(fontWeight: FontWeight.w500),
+                  ),
+                  const SizedBox(width: 8),
+                  StarRating(
+                    initialRating: (booking['rating'] as int?) ?? 0,
+                    readOnly: false,
+                    size: 28.0,
+                    onRatingChanged: (rating) async {
+                      await _saveRating(booking, rating);
+                    },
+                  ),
+                ],
+              ),
+            ],
             if (status == 'booked' && isUpcoming) ...[
               const SizedBox(height: 8),
               Align(
@@ -237,6 +311,86 @@ class _HistoryScreenState extends State<HistoryScreen>
         ),
       ),
     );
+  }
+
+  Future<void> _saveRating(Map<String, dynamic> booking, int rating) async {
+    try {
+      final user = supabase.auth.currentUser;
+      if (user == null) return;
+
+      final dynamic bookingId = booking['id'];
+      final dynamic tripId = booking['trip_id'];
+      final dynamic driverId = booking['driver_id'];
+
+      if (bookingId == null || tripId == null || driverId == null) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Unable to save rating: Missing booking information.'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+        return;
+      }
+
+      // Check if rating already exists
+      final existingRating = await supabase
+          .from('ratings')
+          .select('id')
+          .eq('booking_id', bookingId)
+          .maybeSingle();
+
+      if (existingRating != null) {
+        // Update existing rating
+        await supabase
+            .from('ratings')
+            .update({
+              'rating': rating,
+              'updated_at': DateTime.now().toIso8601String(),
+            })
+            .eq('booking_id', bookingId);
+      } else {
+        // Insert new rating
+        await supabase.from('ratings').insert({
+          'booking_id': bookingId,
+          'user_id': user.id,
+          'driver_id': driverId,
+          'trip_id': tripId,
+          'rating': rating,
+        });
+      }
+
+      // Update local state
+      setState(() {
+        bookingIdToRating[bookingId] = rating;
+        // Update in completed list
+        final index = completed.indexWhere((b) => b['id'] == bookingId);
+        if (index != -1) {
+          completed[index]['rating'] = rating;
+        }
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Rating saved successfully!'),
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      print('Error saving rating: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to save rating: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   Future<void> _cancelBooking(Map<String, dynamic> booking) async {
