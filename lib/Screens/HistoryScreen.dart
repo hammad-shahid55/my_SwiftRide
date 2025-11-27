@@ -159,6 +159,44 @@ class _HistoryScreenState extends State<HistoryScreen>
       driverMap[b['id']] = b['driver_id'];
     }
 
+    // Sort completed and cancelled lists by date (newest first)
+    // Helper function to get sortable date
+    DateTime? getSortableDate(Map<String, dynamic> booking) {
+      final dynamic rt = booking['ride_time'];
+      if (rt is String && rt.isNotEmpty) {
+        try {
+          return DateTime.parse(rt);
+        } catch (_) {}
+      }
+      final dynamic ct = booking['created_at'];
+      if (ct is String && ct.isNotEmpty) {
+        try {
+          return DateTime.parse(ct);
+        } catch (_) {}
+      }
+      return null;
+    }
+
+    // Sort completed list (newest first)
+    completedLocal.sort((a, b) {
+      final dateA = getSortableDate(a);
+      final dateB = getSortableDate(b);
+      if (dateA == null && dateB == null) return 0;
+      if (dateA == null) return 1; // null dates go to end
+      if (dateB == null) return -1;
+      return dateB.compareTo(dateA); // descending order (newest first)
+    });
+
+    // Sort cancelled list (newest first)
+    cancelledLocal.sort((a, b) {
+      final dateA = getSortableDate(a);
+      final dateB = getSortableDate(b);
+      if (dateA == null && dateB == null) return 0;
+      if (dateA == null) return 1; // null dates go to end
+      if (dateB == null) return -1;
+      return dateB.compareTo(dateA); // descending order (newest first)
+    });
+
     setState(() {
       upcoming = upcomingLocal;
       completed = completedLocal;
