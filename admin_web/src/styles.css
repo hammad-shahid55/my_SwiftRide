@@ -1,11 +1,32 @@
 :root {
   --gradient-start: #4c1d95; /* deep purple */
   --gradient-end: #7c3aed;   /* violet */
+}
+
+/* Dark Theme (Default) */
+[data-theme="dark"] {
   --bg: #0f172a;             /* slate-900 */
   --surface: #111827;        /* gray-900 */
   --muted: #9ca3af;          /* gray-400 */
   --text: #e5e7eb;           /* gray-200 */
   --accent: #22d3ee;         /* cyan-400 */
+  --border: rgba(255, 255, 255, 0.08);
+  --border-light: rgba(255, 255, 255, 0.06);
+  --shadow: rgba(0, 0, 0, 0.25);
+  --card-bg: rgba(255, 255, 255, 0.02);
+}
+
+/* Light Theme */
+[data-theme="light"] {
+  --bg: #f8fafc;             /* slate-50 */
+  --surface: #ffffff;        /* white */
+  --muted: #64748b;          /* slate-500 */
+  --text: #1e293b;           /* slate-800 */
+  --accent: #0ea5e9;         /* sky-500 */
+  --border: rgba(0, 0, 0, 0.1);
+  --border-light: rgba(0, 0, 0, 0.05);
+  --shadow: rgba(0, 0, 0, 0.1);
+  --card-bg: rgba(255, 255, 255, 0.8);
 }
 
 html, body, #root {
@@ -15,23 +36,51 @@ html, body, #root {
 body {
   margin: 0;
   font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+  background: var(--bg);
+  color: var(--text);
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Dark theme background gradients */
+[data-theme="dark"] body {
   background:
     radial-gradient(1200px 600px at 10% -10%, rgba(124,58,237,0.25), transparent 60%),
     radial-gradient(1000px 500px at 110% 10%, rgba(76,29,149,0.25), transparent 60%),
     linear-gradient(180deg, #0b1023, #0a0f1f);
-  color: var(--text);
+}
+
+/* Light theme background */
+[data-theme="light"] body {
+  background:
+    radial-gradient(1200px 600px at 10% -10%, rgba(124,58,237,0.08), transparent 60%),
+    radial-gradient(1000px 500px at 110% 10%, rgba(76,29,149,0.08), transparent 60%),
+    linear-gradient(180deg, #f1f5f9, #e2e8f0);
 }
 
 .gradient-header {
   background: linear-gradient(135deg, var(--gradient-start), var(--gradient-end));
   color: white;
+  transition: background 0.3s ease;
+}
+
+[data-theme="light"] .gradient-header {
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .sidebar {
   width: 240px;
-  background: linear-gradient(180deg, #17123a, #120e2e 60%, #0d0a23);
   color: var(--text);
-  border-right: 1px solid rgba(255,255,255,0.06);
+  border-right: 1px solid var(--border-light);
+  transition: background 0.3s ease;
+}
+
+[data-theme="dark"] .sidebar {
+  background: linear-gradient(180deg, #17123a, #120e2e 60%, #0d0a23);
+}
+
+[data-theme="light"] .sidebar {
+  background: linear-gradient(180deg, #f8fafc, #f1f5f9 60%, #e2e8f0);
 }
 
 .sidebar a {
@@ -44,11 +93,12 @@ body {
 }
 
 .card {
-  background: rgba(255, 255, 255, 0.02);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--card-bg);
+  border: 1px solid var(--border);
   border-radius: 12px;
   padding: 16px;
-  box-shadow: 0 10px 20px rgba(0,0,0,0.25);
+  box-shadow: 0 10px 20px var(--shadow);
+  transition: background 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
 }
 
 .stat {
@@ -77,7 +127,8 @@ table.styled {
 
 table.styled th, table.styled td {
   padding: 10px 12px;
-  border-bottom: 1px solid rgba(255,255,255,0.06);
+  border-bottom: 1px solid var(--border-light);
+  transition: border-color 0.3s ease;
 }
 
 table.styled thead th {
@@ -88,10 +139,35 @@ table.styled thead th {
 .btn {
   padding: 8px 12px;
   border-radius: 8px;
-  border: 1px solid rgba(255,255,255,0.1);
-  background: rgba(255,255,255,0.03);
+  border: 1px solid var(--border);
+  background: var(--card-bg);
   color: var(--text);
   cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.btn:hover {
+  background: var(--surface);
+  border-color: var(--accent);
+}
+
+.theme-toggle {
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--card-bg);
+  color: var(--text);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.3s ease;
+  font-size: 14px;
+}
+
+.theme-toggle:hover {
+  background: var(--surface);
+  border-color: var(--accent);
 }
 
 .btn.primary {
@@ -101,5 +177,33 @@ table.styled thead th {
 
 .empty {
   color: var(--muted);
+}
+
+/* Smooth transitions for theme changes */
+* {
+  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+}
+
+/* Ensure links are visible in both themes */
+a {
+  color: var(--text);
+  transition: color 0.3s ease;
+}
+
+a:hover {
+  color: var(--accent);
+}
+
+/* Input fields theme support */
+input, textarea, select {
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border);
+  transition: all 0.3s ease;
+}
+
+input:focus, textarea:focus, select:focus {
+  border-color: var(--accent);
+  outline: none;
 }
 
