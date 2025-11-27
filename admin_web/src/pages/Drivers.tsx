@@ -57,18 +57,25 @@ export const Drivers: React.FC = () => {
       <table className="styled">
         <thead>
           <tr>
-            <Th>Rating</Th>
             <Th>ID</Th>
             <Th>Name</Th>
             <Th>Phone</Th>
+            <Th style={{ textAlign: "right" }}>Rating</Th>
           </tr>
         </thead>
         <tbody>
           {drivers.map((d) => (
             <tr key={d.id}>
+              <Td style={{ fontFamily: "monospace" }}>{d.id}</Td>
+              <Td>
+                <Link to={`/drivers/${d.id}`} style={{ color: "#93c5fd" }}>
+                  {d.full_name || "-"}
+                </Link>
+              </Td>
+              <Td>{d.phone || "-"}</Td>
               <Td>
                 {d.overallRating !== undefined ? (
-                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, justifyContent: "flex-end" }}>
                     <span style={{ fontSize: 18, fontWeight: 600, color: "#fbbf24" }}>
                       ⭐ {d.overallRating.toFixed(1)}
                     </span>
@@ -77,16 +84,9 @@ export const Drivers: React.FC = () => {
                     </span>
                   </div>
                 ) : (
-                  <span style={{ color: "#9ca3af" }}>No ratings</span>
+                  <span style={{ color: "#9ca3af", textAlign: "right", display: "block" }}>No ratings</span>
                 )}
               </Td>
-              <Td style={{ fontFamily: "monospace" }}>{d.id}</Td>
-              <Td>
-                <Link to={`/drivers/${d.id}`} style={{ color: "#93c5fd" }}>
-                  {d.full_name || "-"}
-                </Link>
-              </Td>
-              <Td>{d.phone || "-"}</Td>
             </tr>
           ))}
         </tbody>
@@ -100,12 +100,13 @@ export const Drivers: React.FC = () => {
   );
 };
 
-const Th: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+const Th: React.FC<{ children: React.ReactNode; style?: React.CSSProperties }> = ({ children, style }) => (
   <th
     style={{
       textAlign: "left",
       borderBottom: "1px solid rgba(255,255,255,0.06)",
       padding: 10,
+      ...(style || {}),
     }}
   >
     {children}
