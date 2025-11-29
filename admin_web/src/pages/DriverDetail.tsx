@@ -97,9 +97,20 @@ export const DriverDetail: React.FC = () => {
     <div style={{ display: "grid", gap: 16 }}>
       <div
         className="card"
-        style={{ display: "grid", gridTemplateColumns: "auto 1fr 1fr", gap: 16 }}
+        style={{ display: "grid", gridTemplateColumns: "1fr 1fr auto", gap: 16 }}
       >
-        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", paddingRight: 16, borderRight: "1px solid rgba(255,255,255,0.1)" }}>
+        <div>
+          <div className="stat-title">Driver</div>
+          <div style={{ fontSize: 20, fontWeight: 700 }}>
+            {driver.full_name || "-"}
+          </div>
+          <div style={{ color: "#9ca3af" }}>{driver.id}</div>
+        </div>
+        <div>
+          <div className="stat-title">Phone</div>
+          <div>{driver.phone || "-"}</div>
+        </div>
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", paddingLeft: 16, borderLeft: "1px solid rgba(255,255,255,0.1)" }}>
           {overallRating !== null ? (
             <>
               <div style={{ fontSize: 32, fontWeight: 700, color: "#fbbf24", lineHeight: 1 }}>
@@ -114,17 +125,6 @@ export const DriverDetail: React.FC = () => {
               No ratings
             </div>
           )}
-        </div>
-        <div>
-          <div className="stat-title">Driver</div>
-          <div style={{ fontSize: 20, fontWeight: 700 }}>
-            {driver.full_name || "-"}
-          </div>
-          <div style={{ color: "#9ca3af" }}>{driver.id}</div>
-        </div>
-        <div>
-          <div className="stat-title">Phone</div>
-          <div>{driver.phone || "-"}</div>
         </div>
       </div>
 
