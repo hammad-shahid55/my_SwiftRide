@@ -3,6 +3,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:google_place/google_place.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:swift_ride/Screens/SetLocationMapScreen.dart';
 import 'package:swift_ride/Screens/TripSelectionScreen.dart';
 import 'package:swift_ride/Widgets/theme.dart';
@@ -20,7 +21,9 @@ class LocationSelectionScreen extends StatefulWidget {
 
 class _LocationSelectionScreenState extends State<LocationSelectionScreen> {
   final supabase = Supabase.instance.client;
-  final googlePlace = GooglePlace("AIzaSyCMH5gotuF6vrX4z8Ak4JFfDhpyvL43g50");
+  late final GooglePlace googlePlace = GooglePlace(
+    dotenv.env['GOOGLE_MAPS_API_KEY'] ?? '',
+  );
 
   final TextEditingController fromController = TextEditingController();
   final TextEditingController toController = TextEditingController();

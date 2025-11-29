@@ -59,7 +59,7 @@ class _SplashScreenState extends State<SplashScreen>
     );
 
     // Start animations after delay
-    Future.delayed(const Duration(seconds: 2), () {
+    Future.delayed(const Duration(seconds: 1), () {
       setState(() => _startAnimations = true);
       _vanController.forward().whenComplete(() {
         setState(() => _showSlideText = true);
