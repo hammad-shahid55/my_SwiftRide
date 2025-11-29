@@ -16,6 +16,8 @@ type Booking = {
   user_id: string;
   seats: number;
   status?: string;
+  cancellation_reason?: string;
+  cancelled_at?: string;
 };
 
 export const DriverDetail: React.FC = () => {
@@ -175,6 +177,7 @@ export const DriverDetail: React.FC = () => {
                 <Th>User</Th>
                 <Th>Seats</Th>
                 <Th>Status</Th>
+                <Th>Cancellation Reason</Th>
               </tr>
             </thead>
             <tbody>
@@ -184,7 +187,27 @@ export const DriverDetail: React.FC = () => {
                   <Td>{b.trip_id}</Td>
                   <Td style={{ fontFamily: "monospace" }}>{b.user_id}</Td>
                   <Td>{b.seats}</Td>
-                  <Td>{b.status || "-"}</Td>
+                  <Td>
+                    <span style={{
+                      color: b.status === 'cancelled' ? '#ef4444' : 
+                             b.status === 'completed' ? '#10b981' : 
+                             b.status === 'booked' ? '#3b82f6' : '#9ca3af'
+                    }}>
+                      {b.status || "-"}
+                    </span>
+                  </Td>
+                  <Td>
+                    {b.status === 'cancelled' ? (
+                      <span style={{
+                        color: b.cancellation_reason ? '#ffffff' : '#9ca3af',
+                        fontStyle: b.cancellation_reason ? 'normal' : 'italic'
+                      }}>
+                        {b.cancellation_reason || 'Reason not mentioned'}
+                      </span>
+                    ) : (
+                      <span style={{ color: '#9ca3af' }}>-</span>
+                    )}
+                  </Td>
                 </tr>
               ))}
             </tbody>
