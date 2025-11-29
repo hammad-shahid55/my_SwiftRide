@@ -6,6 +6,94 @@ import 'package:swift_ride/Widgets/StarRating.dart';
 import 'package:swift_ride/Services/BookingStatusService.dart';
 import 'package:swift_ride/Services/AutoCompletionService.dart';
 
+/// Dialog for canceling a booking with reason input
+class _CancelBookingDialog extends StatefulWidget {
+  @override
+  State<_CancelBookingDialog> createState() => _CancelBookingDialogState();
+}
+
+class _CancelBookingDialogState extends State<_CancelBookingDialog> {
+  final TextEditingController _reasonController = TextEditingController();
+  final _formKey = GlobalKey<FormState>();
+
+  @override
+  void dispose() {
+    _reasonController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text(
+        'Cancel Booking',
+        style: TextStyle(fontWeight: FontWeight.bold),
+      ),
+      content: Form(
+        key: _formKey,
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Are you sure you want to cancel this booking?',
+                style: TextStyle(fontSize: 16),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'Please provide a reason for cancellation (optional):',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const SizedBox(height: 8),
+              TextFormField(
+                controller: _reasonController,
+                maxLines: 3,
+                decoration: const InputDecoration(
+                  hintText: 'e.g., Change of plans, Found alternative transport, etc.',
+                  border: OutlineInputBorder(),
+                  contentPadding: EdgeInsets.all(12),
+                ),
+                maxLength: 200,
+                textCapitalization: TextCapitalization.sentences,
+              ),
+            ],
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context, null),
+          child: const Text('No, Keep Booking'),
+        ),
+        ElevatedButton(
+          onPressed: () {
+            if (_formKey.currentState!.validate()) {
+              Navigator.pop(
+                context,
+                {
+                  'confirmed': true,
+                  'reason': _reasonController.text.trim().isNotEmpty
+                      ? _reasonController.text.trim()
+                      : null,
+                },
+              );
+            }
+          },
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.red,
+            foregroundColor: Colors.white,
+          ),
+          child: const Text('Yes, Cancel Booking'),
+        ),
+      ],
+    );
+  }
+}
+
 class HistoryScreen extends StatefulWidget {
   const HistoryScreen({super.key});
 
@@ -311,31 +399,12 @@ class _HistoryScreenState extends State<HistoryScreen>
                 alignment: Alignment.centerRight,
                 child: TextButton(
                   onPressed: () async {
-                    final ok = await showDialog<bool>(
+                    final result = await showDialog<Map<String, dynamic>>(
                           context: context,
-                          builder: (_) => AlertDialog(
-                            title: const Text('Cancel Booking?'),
-                            content: const Text(
-                              'Are you sure you want to cancel this booking?',
-                            ),
-                            actions: [
-                              TextButton(
-                                onPressed: () => Navigator.pop(context, false),
-                                child: const Text('No'),
-                              ),
-                              ElevatedButton(
-                                onPressed: () => Navigator.pop(context, true),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.red,
-                                ),
-                                child: const Text('Yes, Cancel'),
-                              ),
-                            ],
-                          ),
-                        ) ??
-                        false;
-                    if (ok) {
-                      await _cancelBooking(booking);
+                          builder: (context) => _CancelBookingDialog(),
+                        );
+                    if (result != null && result['confirmed'] == true) {
+                      await _cancelBooking(booking, reason: result['reason'] as String?);
                     }
                   },
                   child: const Text(
@@ -431,7 +500,7 @@ class _HistoryScreenState extends State<HistoryScreen>
     }
   }
 
-  Future<void> _cancelBooking(Map<String, dynamic> booking) async {
+  Future<void> _cancelBooking(Map<String, dynamic> booking, {String? reason}) async {
     try {
       final int seats = (booking['seats'] as int?) ?? 0;
       final dynamic tripId = booking['trip_id'];
@@ -450,7 +519,7 @@ class _HistoryScreenState extends State<HistoryScreen>
       // Use BookingStatusService to cancel and send email
       final success = await BookingStatusService.cancelBooking(
         bookingId: bookingId.toString(),
-        reason: 'Cancelled by user',
+        reason: reason ?? 'Cancelled by user',
       );
 
       // Update seats in trip if cancellation was successful

@@ -19,12 +19,16 @@ class BookingStatusService {
           .eq('id', bookingId)
           .single();
 
-      final booking = bookingResponse as Map<String, dynamic>;
+      final booking = Map<String, dynamic>.from(bookingResponse);
 
-      // Update booking status
+      // Update booking status and cancellation reason if provided
+      final updateData = <String, dynamic>{'status': newStatus};
+      if (newStatus.toLowerCase() == 'cancelled' && cancellationReason != null && cancellationReason.isNotEmpty) {
+        updateData['cancellation_reason'] = cancellationReason;
+      }
       await supabase
           .from('bookings')
-          .update({'status': newStatus})
+          .update(updateData)
           .eq('id', bookingId);
 
       // Get user details
