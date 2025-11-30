@@ -26,13 +26,17 @@ export const Bookings: React.FC = () => {
     
     const bookingsList = (data as Booking[]) || [];
     
-    // Fetch ratings for all bookings
+    // Fetch ratings for all bookings from backend
     if (bookingsList.length > 0) {
       const bookingIds = bookingsList.map(b => b.id);
-      const { data: ratingsData } = await supabase
+      const { data: ratingsData, error } = await supabase
         .from("ratings")
         .select("booking_id, rating")
         .in("booking_id", bookingIds);
+      
+      if (error) {
+        console.error("Error fetching ratings:", error);
+      }
       
       // Create a map of booking_id to rating
       const ratingsMap = new Map<number, number>();
@@ -42,9 +46,13 @@ export const Bookings: React.FC = () => {
         });
       }
       
-      // Add ratings to bookings
+      // Add ratings to bookings (only for completed bookings)
       bookingsList.forEach(booking => {
-        booking.rating = ratingsMap.get(booking.id);
+        if (booking.status === 'completed') {
+          booking.rating = ratingsMap.get(booking.id);
+        } else {
+          booking.rating = undefined;
+        }
       });
     }
     
@@ -90,22 +98,31 @@ export const Bookings: React.FC = () => {
                 </span>
               </Td>
               <Td>
-                {b.rating !== undefined && b.rating !== null ? (
-                  <span style={{
-                    color: '#fbbf24',
-                    fontWeight: 600,
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 4
-                  }}>
-                    ⭐ {b.rating}/5
-                  </span>
+                {b.status === 'completed' ? (
+                  b.rating !== undefined && b.rating !== null ? (
+                    <span style={{
+                      color: '#fbbf24',
+                      fontWeight: 600,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 4
+                    }}>
+                      ⭐ {b.rating}/5
+                    </span>
+                  ) : (
+                    <span style={{
+                      color: '#9ca3af',
+                      fontStyle: 'italic'
+                    }}>
+                      Rating not given by user
+                    </span>
+                  )
                 ) : (
                   <span style={{
-                    color: '#9ca3af',
+                    color: '#6b7280',
                     fontStyle: 'italic'
                   }}>
-                    Rating not given by user
+                    N/A (not completed)
                   </span>
                 )}
               </Td>

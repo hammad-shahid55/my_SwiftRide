@@ -76,19 +76,47 @@ export const DriverDetail: React.FC = () => {
         }
       }
       
-      // Fetch overall rating
+      // Fetch overall rating from backend (only from completed bookings)
       try {
-        const { data: ratingsData } = await supabase
+        const { data: ratingsData, error } = await supabase
           .from("ratings")
-          .select("rating")
+          .select("rating, booking_id")
           .eq("driver_id", id);
         
+        if (error) {
+          console.error("Error fetching ratings:", error);
+          setOverallRating(null);
+          setTotalRatings(0);
+          return;
+        }
+        
         if (ratingsData && ratingsData.length > 0) {
-          const total = ratingsData.length;
-          const sum = ratingsData.reduce((acc, r) => acc + (r.rating || 0), 0);
-          const avg = sum / total;
-          setOverallRating(Math.round(avg * 10) / 10);
-          setTotalRatings(total);
+          // Verify ratings are only from completed bookings
+          const bookingIds = ratingsData.map(r => r.booking_id);
+          const { data: bookingsData } = await supabase
+            .from("bookings")
+            .select("id, status")
+            .in("id", bookingIds)
+            .eq("status", "completed");
+          
+          // Filter ratings to only include those from completed bookings
+          const completedBookingIds = new Set(
+            (bookingsData || []).map(b => b.id)
+          );
+          const validRatings = ratingsData.filter(r => 
+            completedBookingIds.has(r.booking_id)
+          );
+          
+          if (validRatings.length > 0) {
+            const total = validRatings.length;
+            const sum = validRatings.reduce((acc, r) => acc + (r.rating || 0), 0);
+            const avg = sum / total;
+            setOverallRating(Math.round(avg * 10) / 10);
+            setTotalRatings(total);
+          } else {
+            setOverallRating(null);
+            setTotalRatings(0);
+          }
         } else {
           setOverallRating(null);
           setTotalRatings(0);
@@ -221,22 +249,31 @@ export const DriverDetail: React.FC = () => {
                     </span>
                   </Td>
                   <Td>
-                    {b.rating !== undefined && b.rating !== null ? (
-                      <span style={{
-                        color: '#fbbf24',
-                        fontWeight: 600,
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 4
-                      }}>
-                        ⭐ {b.rating}/5
-                      </span>
+                    {b.status === 'completed' ? (
+                      b.rating !== undefined && b.rating !== null ? (
+                        <span style={{
+                          color: '#fbbf24',
+                          fontWeight: 600,
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 4
+                        }}>
+                          ⭐ {b.rating}/5
+                        </span>
+                      ) : (
+                        <span style={{
+                          color: '#9ca3af',
+                          fontStyle: 'italic'
+                        }}>
+                          Rating not given by user
+                        </span>
+                      )
                     ) : (
                       <span style={{
-                        color: '#9ca3af',
+                        color: '#6b7280',
                         fontStyle: 'italic'
                       }}>
-                        Rating not given by user
+                        N/A (not completed)
                       </span>
                     )}
                   </Td>

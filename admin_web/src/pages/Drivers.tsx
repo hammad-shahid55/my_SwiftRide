@@ -14,24 +14,48 @@ export const Drivers: React.FC = () => {
     const { data } = await supabase.from("drivers").select("*");
     const driversList = (data as Driver[]) || [];
     
-    // Fetch overall ratings for each driver
+    // Fetch overall ratings for each driver from backend
     const driversWithRatings = await Promise.all(
       driversList.map(async (driver) => {
         try {
-          const { data: ratingsData } = await supabase
+          // Fetch ratings from ratings table filtered by driver_id
+          const { data: ratingsData, error } = await supabase
             .from("ratings")
-            .select("rating")
+            .select("rating, booking_id")
             .eq("driver_id", driver.id);
           
+          if (error) {
+            console.error(`Error fetching ratings for driver ${driver.id}:`, error);
+            return { ...driver, overallRating: undefined, totalRatings: 0 };
+          }
+          
           if (ratingsData && ratingsData.length > 0) {
-            const totalRatings = ratingsData.length;
-            const sum = ratingsData.reduce((acc, r) => acc + (r.rating || 0), 0);
-            const overallRating = sum / totalRatings;
-            return {
-              ...driver,
-              overallRating: Math.round(overallRating * 10) / 10, // Round to 1 decimal
-              totalRatings,
-            };
+            // Verify ratings are only from completed bookings
+            const bookingIds = ratingsData.map(r => r.booking_id);
+            const { data: bookingsData } = await supabase
+              .from("bookings")
+              .select("id, status")
+              .in("id", bookingIds)
+              .eq("status", "completed");
+            
+            // Filter ratings to only include those from completed bookings
+            const completedBookingIds = new Set(
+              (bookingsData || []).map(b => b.id)
+            );
+            const validRatings = ratingsData.filter(r => 
+              completedBookingIds.has(r.booking_id)
+            );
+            
+            if (validRatings.length > 0) {
+              const totalRatings = validRatings.length;
+              const sum = validRatings.reduce((acc, r) => acc + (r.rating || 0), 0);
+              const overallRating = sum / totalRatings;
+              return {
+                ...driver,
+                overallRating: Math.round(overallRating * 10) / 10, // Round to 1 decimal
+                totalRatings,
+              };
+            }
           }
           return { ...driver, overallRating: undefined, totalRatings: 0 };
         } catch (error) {
