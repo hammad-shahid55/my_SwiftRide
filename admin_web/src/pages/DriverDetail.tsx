@@ -18,6 +18,7 @@ type Booking = {
   status?: string;
   cancellation_reason?: string;
   cancelled_at?: string;
+  rating?: number;
 };
 
 export const DriverDetail: React.FC = () => {
@@ -51,6 +52,28 @@ export const DriverDetail: React.FC = () => {
           .select("*")
           .in("trip_id", tripIds)
           .order("created_at", { ascending: false });
+        
+        // Fetch ratings for bookings
+        if (b.data && b.data.length > 0) {
+          const bookingIds = (b.data as Booking[]).map(booking => booking.id);
+          const { data: ratingsData } = await supabase
+            .from("ratings")
+            .select("booking_id, rating")
+            .in("booking_id", bookingIds);
+          
+          // Create a map of booking_id to rating
+          const ratingsMap = new Map<number, number>();
+          if (ratingsData) {
+            ratingsData.forEach((r: any) => {
+              ratingsMap.set(r.booking_id, r.rating);
+            });
+          }
+          
+          // Add ratings to bookings
+          (b.data as Booking[]).forEach(booking => {
+            booking.rating = ratingsMap.get(booking.id);
+          });
+        }
       }
       
       // Fetch overall rating
@@ -177,6 +200,7 @@ export const DriverDetail: React.FC = () => {
                 <Th>User</Th>
                 <Th>Seats</Th>
                 <Th>Status</Th>
+                <Th>Rating</Th>
                 <Th>Cancellation Reason</Th>
               </tr>
             </thead>
@@ -195,6 +219,26 @@ export const DriverDetail: React.FC = () => {
                     }}>
                       {b.status || "-"}
                     </span>
+                  </Td>
+                  <Td>
+                    {b.rating !== undefined && b.rating !== null ? (
+                      <span style={{
+                        color: '#fbbf24',
+                        fontWeight: 600,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 4
+                      }}>
+                        ⭐ {b.rating}/5
+                      </span>
+                    ) : (
+                      <span style={{
+                        color: '#9ca3af',
+                        fontStyle: 'italic'
+                      }}>
+                        Rating not given by user
+                      </span>
+                    )}
                   </Td>
                   <Td>
                     {b.status === 'cancelled' ? (
