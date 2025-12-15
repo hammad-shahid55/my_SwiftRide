@@ -147,8 +147,12 @@ class _HomeScreenState extends State<HomeScreen> {
       };
     }).toList();
 
+    // Show only the 5 most recent past rides on the home screen
+    final limitedEnriched =
+        enriched.length > 5 ? enriched.take(5).toList() : enriched;
+
     setState(() {
-      completedRides = enriched;
+      completedRides = limitedEnriched;
     });
   }
 
